@@ -22,6 +22,7 @@ const editBlogSchema = z.object({
   author_name: z.string().min(1, 'Author name is required'),
   status: z.enum(['draft', 'published'] as const),
   cover_image: z.string().optional(),
+  tags: z.string().optional(),
 })
 
 type EditBlogForm = z.infer<typeof editBlogSchema>
@@ -53,6 +54,7 @@ export function EditBlog() {
       setValue('author_name', blog.author_name)
       setValue('status', blog.status as BlogStatus)
       setValue('cover_image', blog.cover_image || '')
+      setValue('tags', blog.tags || '')
     }
   }, [blog, setValue])
 
@@ -143,7 +145,7 @@ export function EditBlog() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
               <div className="space-y-2">
                 <Label htmlFor="title">Title</Label>
                 <Input
@@ -169,6 +171,20 @@ export function EditBlog() {
                 />
                 {errors.slug && (
                   <p className="text-sm text-red-500">{errors.slug.message}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="tags">Tags</Label>
+                <Input
+                  id="tags"
+                  placeholder="Enter tags (e.g. AI Hackathons)"
+                  {...register('tags')}
+                  disabled={isSubmitting}
+                  className="text-sm sm:text-base"
+                />
+                {errors.tags && (
+                  <p className="text-sm text-red-500">{errors.tags.message}</p>
                 )}
               </div>
             </div>

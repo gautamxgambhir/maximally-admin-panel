@@ -25,7 +25,10 @@ export async function getBlogById(id: string): Promise<Blog> {
 export async function createBlog(blogData: CreateBlogData): Promise<Blog> {
   const { data, error } = await supabase
     .from('blogs')
-    .insert(blogData)
+    .insert({
+      ...blogData,
+      tags: blogData.tags ?? '',
+    })
     .select()
     .single()
   

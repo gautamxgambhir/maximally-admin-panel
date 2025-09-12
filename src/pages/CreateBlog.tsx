@@ -22,6 +22,7 @@ const createBlogSchema = z.object({
   content: z.string().optional(),
   author_name: z.string().min(1, 'Author name is required'),
   status: z.enum(['draft', 'published'] as const),
+  tags: z.string().optional(),
 })
 
 type CreateBlogForm = z.infer<typeof createBlogSchema>
@@ -46,6 +47,7 @@ export function CreateBlog() {
     defaultValues: {
       author_name: user?.email?.split('@')[0] || '',
       status: 'draft',
+      tags: '',
     },
   })
 
@@ -75,6 +77,7 @@ export function CreateBlog() {
       await createBlog.mutateAsync({
         ...data,
         cover_image: coverImageUrl || undefined,
+        tags: data.tags || '',
       })
       navigate('/blogs')
     } catch (error) {
@@ -134,7 +137,7 @@ export function CreateBlog() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
               <div className="space-y-2">
                 <Label htmlFor="title">Title</Label>
                 <Input
@@ -160,6 +163,20 @@ export function CreateBlog() {
                 />
                 {errors.slug && (
                   <p className="text-sm text-red-500">{errors.slug.message}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="tags">Tags</Label>
+                <Input
+                  id="tags"
+                  placeholder="Enter tags (e.g. AI Hackathons)"
+                  {...register('tags')}
+                  disabled={isSubmitting}
+                  className="text-sm sm:text-base"
+                />
+                {errors.tags && (
+                  <p className="text-sm text-red-500">{errors.tags.message}</p>
                 )}
               </div>
             </div>
