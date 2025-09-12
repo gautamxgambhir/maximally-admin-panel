@@ -10,7 +10,7 @@ export interface Blog {
   status: BlogStatus
   created_at: string
   updated_at: string
-  tags?: string | null
+  tag?: string | null
 }
 
 export interface CreateBlogData {
@@ -20,7 +20,7 @@ export interface CreateBlogData {
   cover_image?: string
   author_name: string
   status: BlogStatus
-  tags?: string
+  tag?: string
 }
 
 export interface UpdateBlogData extends Partial<CreateBlogData> {

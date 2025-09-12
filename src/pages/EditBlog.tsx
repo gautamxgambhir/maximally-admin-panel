@@ -23,6 +23,10 @@ const editBlogSchema = z.object({
   status: z.enum(['draft', 'published'] as const),
   cover_image: z.string().optional(),
   tags: z.string().optional(),
+  reading_time_minutes: z.union([
+    z.number().min(1, 'Reading time must be at least 1 minute'),
+    z.string(),
+  ]).optional(),
 })
 
 type EditBlogForm = z.infer<typeof editBlogSchema>
@@ -55,6 +59,7 @@ export function EditBlog() {
       setValue('status', blog.status as BlogStatus)
       setValue('cover_image', blog.cover_image || '')
       setValue('tags', blog.tags || '')
+      setValue('reading_time_minutes', blog.reading_time_minutes || '')
     }
   }, [blog, setValue])
 
@@ -87,7 +92,13 @@ export function EditBlog() {
 
   const onSubmit = async (data: EditBlogForm) => {
     try {
-      await updateBlog.mutateAsync({ id: id!, ...data })
+      const submitData = {
+        ...data,
+        reading_time_minutes: typeof data.reading_time_minutes === 'string' && data.reading_time_minutes === '' 
+          ? undefined 
+          : Number(data.reading_time_minutes)
+      }
+      await updateBlog.mutateAsync({ id: id!, ...submitData })
       navigate('/blogs')
     } catch (error) {
       toast.error((error as Error).message || 'Failed to update blog')
@@ -145,7 +156,7 @@ export function EditBlog() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
               <div className="space-y-2">
                 <Label htmlFor="title">Title</Label>
                 <Input
@@ -185,6 +196,22 @@ export function EditBlog() {
                 />
                 {errors.tags && (
                   <p className="text-sm text-red-500">{errors.tags.message}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="reading_time_minutes">Reading Time (minutes)</Label>
+                <Input
+                  id="reading_time_minutes"
+                  type="number"
+                  min="1"
+                  placeholder="5"
+                  {...register('reading_time_minutes')}
+                  disabled={isSubmitting}
+                  className="text-sm sm:text-base"
+                />
+                {errors.reading_time_minutes && (
+                  <p className="text-sm text-red-500">{errors.reading_time_minutes.message}</p>
                 )}
               </div>
             </div>
