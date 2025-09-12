@@ -23,6 +23,10 @@ const createBlogSchema = z.object({
   author_name: z.string().min(1, 'Author name is required'),
   status: z.enum(['draft', 'published'] as const),
   tag: z.string().optional(),
+  reading_time_minutes: z.union([
+    z.number().min(1, 'Reading time must be at least 1 minute'),
+    z.string(),
+  ]).optional(),
 })
 
 type CreateBlogForm = z.infer<typeof createBlogSchema>
@@ -74,11 +78,15 @@ export function CreateBlog() {
 
   const onSubmit = async (data: CreateBlogForm) => {
     try {
-      await createBlog.mutateAsync({
+      const submitData = {
         ...data,
         cover_image: coverImageUrl || undefined,
-  tag: data.tag || '',
-      })
+        tag: data.tag || '',
+        reading_time_minutes: typeof data.reading_time_minutes === 'string' && data.reading_time_minutes === '' 
+          ? undefined 
+          : Number(data.reading_time_minutes)
+      }
+      await createBlog.mutateAsync(submitData)
       navigate('/blogs')
     } catch (error) {
       console.error('Error creating blog:', error)
@@ -137,7 +145,7 @@ export function CreateBlog() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
               <div className="space-y-2">
                 <Label htmlFor="title">Title</Label>
                 <Input
@@ -177,6 +185,22 @@ export function CreateBlog() {
                 />
                 {errors.tag && (
                   <p className="text-sm text-red-500">{errors.tag.message}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="reading_time_minutes">Reading Time (minutes)</Label>
+                <Input
+                  id="reading_time_minutes"
+                  type="number"
+                  min="1"
+                  placeholder="5"
+                  {...register('reading_time_minutes')}
+                  disabled={isSubmitting}
+                  className="text-sm sm:text-base"
+                />
+                {errors.reading_time_minutes && (
+                  <p className="text-sm text-red-500">{errors.reading_time_minutes.message}</p>
                 )}
               </div>
             </div>
