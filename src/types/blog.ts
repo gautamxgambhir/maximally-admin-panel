@@ -11,6 +11,8 @@ export interface Blog {
   created_at: string
   updated_at: string
   tag?: string | null
+  tags?: string | null
+  reading_time_minutes?: number | null
 }
 
 export interface CreateBlogData {
@@ -21,6 +23,8 @@ export interface CreateBlogData {
   author_name: string
   status: BlogStatus
   tag?: string
+  tags?: string
+  reading_time_minutes?: number
 }
 
 export interface UpdateBlogData extends Partial<CreateBlogData> {
