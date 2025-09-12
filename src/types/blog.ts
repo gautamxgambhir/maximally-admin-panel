@@ -10,7 +10,6 @@ export interface Blog {
   status: BlogStatus
   created_at: string
   updated_at: string
-  tag?: string | null
   tags?: string | null
   reading_time_minutes?: number | null
 }
@@ -22,7 +21,6 @@ export interface CreateBlogData {
   cover_image?: string
   author_name: string
   status: BlogStatus
-  tag?: string
   tags?: string
   reading_time_minutes?: number
 }

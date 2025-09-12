@@ -22,7 +22,7 @@ const createBlogSchema = z.object({
   content: z.string().optional(),
   author_name: z.string().min(1, 'Author name is required'),
   status: z.enum(['draft', 'published'] as const),
-  tag: z.string().optional(),
+  tags: z.string().optional(),
   reading_time_minutes: z.union([
     z.number().min(1, 'Reading time must be at least 1 minute'),
     z.string(),
@@ -51,7 +51,7 @@ export function CreateBlog() {
     defaultValues: {
       author_name: user?.email?.split('@')[0] || '',
       status: 'draft',
-  tag: '',
+      tags: '',
     },
   })
 
@@ -81,7 +81,7 @@ export function CreateBlog() {
       const submitData = {
         ...data,
         cover_image: coverImageUrl || undefined,
-        tag: data.tag || '',
+        tags: data.tags || '',
         reading_time_minutes: typeof data.reading_time_minutes === 'string' && data.reading_time_minutes === '' 
           ? undefined 
           : Number(data.reading_time_minutes)
@@ -175,16 +175,16 @@ export function CreateBlog() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="tag">Tag</Label>
+                <Label htmlFor="tags">Tag</Label>
                 <Input
-                  id="tag"
-                  placeholder="Enter a single tag (e.g. AI)"
-                  {...register('tag')}
+                  id="tags"
+                  placeholder="Enter tag (e.g. AI Hackathons)"
+                  {...register('tags')}
                   disabled={isSubmitting}
                   className="text-sm sm:text-base"
                 />
-                {errors.tag && (
-                  <p className="text-sm text-red-500">{errors.tag.message}</p>
+                {errors.tags && (
+                  <p className="text-sm text-red-500">{errors.tags.message}</p>
                 )}
               </div>
 

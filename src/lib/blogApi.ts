@@ -27,7 +27,7 @@ export async function createBlog(blogData: CreateBlogData): Promise<Blog> {
     .from('blogs')
     .insert({
       ...blogData,
-      tag: blogData.tag ?? '',
+      tags: blogData.tags ?? '',
     })
     .select()
     .single()
