@@ -3,14 +3,14 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { useHackathonV2, useUpdateHackathonV2 } from '@/hooks/useHackathons'
+import { useHackathonV2, useUpdateHackathonV2, useUploadHackathonImage } from '@/hooks/useHackathons'
 import { generateSlug } from '@/lib/hackathonApi'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Upload } from 'lucide-react'
 import { toast } from 'sonner'
 
 const simpleHackathonSchema = z.object({
@@ -24,6 +24,7 @@ const simpleHackathonSchema = z.object({
   focus_areas_text: z.string().min(1, 'Focus areas are required'),
   devpost_url: z.string().url('Please enter a valid URL').min(1, 'Devpost URL is required'),
   devpost_register_url: z.string().url('Please enter a valid URL').min(1, 'Devpost register URL is required'),
+  cover_image: z.string().optional(),
 })
 
 type EditHackathonForm = z.infer<typeof simpleHackathonSchema>
@@ -33,11 +34,13 @@ export function EditHackathon() {
   const { id } = useParams<{ id: string }>()
   const { data: hackathon, isLoading, error } = useHackathonV2(id!)
   const updateHackathon = useUpdateHackathonV2()
+  const uploadImage = useUploadHackathonImage()
 
   const {
     register,
     handleSubmit,
     setValue,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<EditHackathonForm>({
     resolver: zodResolver(simpleHackathonSchema),
@@ -55,9 +58,18 @@ export function EditHackathon() {
       setValue('focus_areas_text', Array.isArray((hackathon as any).focus_areas) ? (hackathon as any).focus_areas.join(', ') : '')
       setValue('devpost_url', (hackathon as any).devpost_url || '')
       setValue('devpost_register_url', (hackathon as any).devpost_register_url || '')
+      setValue('cover_image', hackathon.cover_image || '')
     }
   }, [hackathon, setValue])
 
+  const handleImageUpload = async (file: File) => {
+    try {
+      const url = await uploadImage.mutateAsync(file)
+      setValue('cover_image', url)
+    } catch {
+      // Error is handled by the hook
+    }
+  }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -86,6 +98,7 @@ export function EditHackathon() {
         focus_areas: focusAreas,
         devpost_url: data.devpost_url,
         devpost_register_url: data.devpost_register_url,
+        cover_image: data.cover_image,
         // Regenerate some derived fields
         slug: generateSlug(data.title),
         tagline: `${data.title} - Join us for this amazing event!`,
@@ -222,6 +235,34 @@ export function EditHackathon() {
                 <Input id="devpost_register_url" type="url" {...register('devpost_register_url')} disabled={isSubmitting} />
                 {errors.devpost_register_url && <p className="text-sm text-red-500">{errors.devpost_register_url.message}</p>}
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Cover Image</Label>
+              <div className="flex items-center gap-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => document.getElementById('cover-image-upload')?.click()}
+                  disabled={isSubmitting || uploadImage.isPending}
+                  className="flex items-center gap-2"
+                >
+                  <Upload className="h-4 w-4" />
+                  {uploadImage.isPending ? 'Uploading...' : 'Upload Image'}
+                </Button>
+                {watch('cover_image') && (
+                  <div className="text-sm text-muted-foreground truncate max-w-xs">
+                    Image uploaded
+                  </div>
+                )}
+              </div>
+              <input
+                id="cover-image-upload"
+                type="file"
+                accept="image/*"
+                onChange={handleFileChange}
+                className="hidden"
+              />
             </div>
 
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
