@@ -1,5 +1,5 @@
 import { supabase } from './supabase'
-import { Hackathon, CreateHackathonData, UpdateHackathonData } from '@/types/hackathon'
+import { Hackathon, CreateHackathonData, UpdateHackathonData, HackathonV2, CreateHackathonV2Data, UpdateHackathonV2Data } from '@/types/hackathon'
 
 export async function getHackathons(): Promise<Hackathon[]> {
   const { data, error } = await supabase
@@ -20,6 +20,16 @@ export async function getHackathonById(id: string): Promise<Hackathon> {
   
   if (error) throw error
   return data
+}
+
+export async function getHackathonByIdV2(id: string): Promise<HackathonV2> {
+  const { data, error } = await supabase
+    .from('hackathons')
+    .select('*')
+    .eq('id', id)
+    .single()
+  if (error) throw error
+  return data as unknown as HackathonV2
 }
 
 export async function createHackathon(hackathonData: CreateHackathonData): Promise<Hackathon> {
@@ -97,4 +107,28 @@ export async function checkSlugExists(slug: string, excludeId?: string): Promise
   if (error) throw error
   
   return (data && data.length > 0) || false
+}
+
+// V2 API functions for new schema
+export async function createHackathonV2(hackathonData: CreateHackathonV2Data): Promise<HackathonV2> {
+  const { data, error } = await supabase
+    .from('hackathons')
+    .insert(hackathonData)
+    .select()
+    .single()
+  
+  if (error) throw error
+  return data
+}
+
+export async function updateHackathonV2(hackathonData: UpdateHackathonV2Data): Promise<HackathonV2> {
+  const { id, ...updateData } = hackathonData
+  const { data, error } = await supabase
+    .from('hackathons')
+    .update(updateData)
+    .eq('id', id)
+    .select()
+    .single()
+  if (error) throw error
+  return data
 }

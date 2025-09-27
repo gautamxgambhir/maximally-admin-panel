@@ -1,44 +1,35 @@
-import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { useCreateHackathon, useUploadHackathonImage } from '@/hooks/useHackathons'
+import { useCreateHackathonV2 } from '@/hooks/useHackathons'
 import { generateSlug } from '@/lib/hackathonApi'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { MarkdownEditor } from '@/components/MarkdownEditor'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { ArrowLeft, Upload, X } from 'lucide-react'
-import { HackathonStatus } from '@/types/hackathon'
+import { ArrowLeft } from 'lucide-react'
+import { CreateHackathonV2Data } from '@/types/hackathon'
 
-const createHackathonSchema = z.object({
-  name: z.string().min(1, 'Name is required'),
-  slug: z.string().min(1, 'Slug is required'),
-  tagline: z.string().max(150, 'Tagline must be 150 characters or less').optional(),
-  description: z.string().optional(),
-  status: z.enum(['draft', 'upcoming', 'live', 'past'] as const),
+const simpleHackathonSchema = z.object({
+  title: z.string().min(1, 'Title is required'),
+  subtitle: z.string().min(1, 'Subtitle is required'),
   start_date: z.string().min(1, 'Start date is required'),
   end_date: z.string().min(1, 'End date is required'),
-  location: z.string().optional(),
-  prize_pool: z.string().optional(),
-  max_team_size: z.number().min(1).optional().or(z.literal(0)),
-  registration_link: z.string().url().optional().or(z.literal('')),
-}).refine((data) => new Date(data.end_date) > new Date(data.start_date), {
-  message: "End date must be after start date",
-  path: ["end_date"],
+  duration: z.string().min(1, 'Duration is required'),
+  location: z.string().min(1, 'Location is required'),
+  status: z.string().min(1, 'Status is required'),
+  focus_areas_text: z.string().min(1, 'Focus areas are required'),
+  devpost_url: z.string().url('Please enter a valid URL').min(1, 'Devpost URL is required'),
+  devpost_register_url: z.string().url('Please enter a valid URL').min(1, 'Devpost register URL is required'),
 })
 
-type CreateHackathonForm = z.infer<typeof createHackathonSchema>
+type SimpleHackathonForm = z.infer<typeof simpleHackathonSchema>
 
 export function CreateHackathon() {
   const navigate = useNavigate()
-  const createHackathon = useCreateHackathon()
-  const uploadImage = useUploadHackathonImage()
-  const [coverImageUrl, setCoverImageUrl] = useState<string>('')
-  const [isUploading, setIsUploading] = useState(false)
+  const createHackathon = useCreateHackathonV2()
 
   const {
     register,
@@ -46,46 +37,60 @@ export function CreateHackathon() {
     setValue,
     watch,
     formState: { errors, isSubmitting },
-  } = useForm<CreateHackathonForm>({
-    resolver: zodResolver(createHackathonSchema),
+  } = useForm<SimpleHackathonForm>({
+    resolver: zodResolver(simpleHackathonSchema),
     defaultValues: {
-      status: 'draft',
+      status: 'upcoming',
     },
   })
 
-  const name = watch('name')
+  const title = watch('title')
 
-  useEffect(() => {
-    if (name) {
-      const slug = generateSlug(name)
-      setValue('slug', slug)
-    }
-  }, [name, setValue])
-
-  const handleImageUpload = async (file: File) => {
-    setIsUploading(true)
+  const onSubmit = async (data: SimpleHackathonForm) => {
     try {
-      const url = await uploadImage.mutateAsync(file)
-      setCoverImageUrl(url)
-    } catch {
-      // Error handled by hook
-    } finally {
-      setIsUploading(false)
-    }
-  }
+      // Parse focus areas from comma-separated text
+      const focusAreas = data.focus_areas_text 
+        ? data.focus_areas_text.split(',').map(area => area.trim()).filter(area => area) 
+        : []
 
-  const onSubmit = async (data: CreateHackathonForm) => {
-    try {
-      const formattedData = {
-        ...data,
-        cover_image: coverImageUrl || undefined,
-        max_team_size: data.max_team_size || undefined,
-        registration_link: data.registration_link || undefined,
-        tagline: data.tagline || undefined,
-        description: data.description || undefined,
-        location: data.location || undefined,
-        prize_pool: data.prize_pool || undefined,
+      const formattedData: CreateHackathonV2Data = {
+        // User provided fields (all required now)
+        title: data.title,
+        subtitle: data.subtitle,
+        start_date: data.start_date,
+        end_date: data.end_date,
+        duration: data.duration,
+        location: data.location,
+        status: data.status,
+        focus_areas: focusAreas,
+        devpost_url: data.devpost_url,
+        devpost_register_url: data.devpost_register_url,
+        
+        // Auto-generated fields
+        slug: generateSlug(data.title),
+        tagline: `${data.title} - Join us for this amazing event!`,
+        description: `${data.title} is an exciting hackathon happening from ${data.start_date} to ${data.end_date}. Duration: ${data.duration}.${data.location ? ` Location: ${data.location}.` : ''} Come build amazing projects!`,
+        
+        // Default values for required fields
+        format: 'Online',
+        team_size: '1-4 members',
+        judging_type: 'Panel review',
+        results_date: data.end_date,
+        what_it_is: `${data.title} is a hackathon where developers, designers, and innovators come together to build amazing projects.`,
+        the_idea: 'Build innovative solutions, learn new technologies, and network with fellow creators in this exciting competition.',
+        who_joins: ['Developers', 'Designers', 'Students', 'Innovators'],
+        tech_rules: ['Any technology stack allowed', 'Open source encouraged', 'AI tools permitted'],
+        fun_awards: ['Best Overall Project', 'Most Creative', 'Best Technical Implementation'],
+        perks: ['Networking opportunities', 'Learning experience', 'Recognition and prizes'],
+        judging_description: 'Projects will be evaluated by industry experts based on creativity, technical implementation, and overall impact.',
+        judging_criteria: 'Innovation (25%), Technical Excellence (25%), Design & UX (25%), Impact & Feasibility (25%)',
+        required_submissions: ['Project demo', 'Source code', 'Project description'],
+        theme_color_primary: '#dc2626',
+        theme_color_secondary: '#fbbf24',
+        theme_color_accent: '#10b981',
+        is_active: true,
       }
+
       await createHackathon.mutateAsync(formattedData)
       navigate('/hackathons')
     } catch (error) {
@@ -93,20 +98,6 @@ export function CreateHackathon() {
     }
   }
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      if (file.type.startsWith('image/')) {
-        handleImageUpload(file)
-      } else {
-        alert('Please select an image file')
-      }
-    }
-  }
-
-  const removeCoverImage = () => {
-    setCoverImageUrl('')
-  }
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -124,7 +115,7 @@ export function CreateHackathon() {
             Create Hackathon
           </h1>
           <p className="text-muted-foreground text-sm sm:text-base">
-            Create a new hackathon or event
+            Create a new hackathon quickly with essential details
           </p>
         </div>
       </div>
@@ -133,77 +124,47 @@ export function CreateHackathon() {
         <CardHeader>
           <CardTitle>Hackathon Details</CardTitle>
           <CardDescription>
-            Fill in the details for your new hackathon or event
+            Fill in the essential details for your hackathon
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label htmlFor="name">Name *</Label>
+                <Label htmlFor="title">Title *</Label>
                 <Input
-                  id="name"
-                  placeholder="Enter hackathon name"
-                  {...register('name')}
+                  id="title"
+                  placeholder="Code Hypothesis Hackathon"
+                  {...register('title')}
                   disabled={isSubmitting}
-                  className="text-sm sm:text-base"
                 />
-                {errors.name && (
-                  <p className="text-sm text-red-500">{errors.name.message}</p>
+                {errors.title && (
+                  <p className="text-sm text-red-500">{errors.title.message}</p>
                 )}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="slug">Slug *</Label>
+                <Label htmlFor="subtitle">Subtitle *</Label>
                 <Input
-                  id="slug"
-                  placeholder="hackathon-url-slug"
-                  {...register('slug')}
+                  id="subtitle"
+                  placeholder="Test your coding theories"
+                  {...register('subtitle')}
                   disabled={isSubmitting}
-                  className="text-sm sm:text-base"
                 />
-                {errors.slug && (
-                  <p className="text-sm text-red-500">{errors.slug.message}</p>
+                {errors.subtitle && (
+                  <p className="text-sm text-red-500">{errors.subtitle.message}</p>
                 )}
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="tagline">Tagline</Label>
-              <Input
-                id="tagline"
-                placeholder="Short tagline for SEO (max 150 characters)"
-                {...register('tagline')}
-                disabled={isSubmitting}
-                maxLength={150}
-                className="text-sm sm:text-base"
-              />
-              {errors.tagline && (
-                <p className="text-sm text-red-500">{errors.tagline.message}</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label>Description</Label>
-              <MarkdownEditor
-                value={watch('description') || ''}
-                onChange={(value) => setValue('description', value)}
-                placeholder="Write your hackathon description in Markdown..."
-                disabled={isSubmitting}
-                error={errors.description?.message}
-                height="400px"
-              />
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="space-y-2">
                 <Label htmlFor="start_date">Start Date *</Label>
                 <Input
                   id="start_date"
-                  type="datetime-local"
+                  placeholder="Sep 1, 2025"
                   {...register('start_date')}
                   disabled={isSubmitting}
-                  className="text-sm sm:text-base"
                 />
                 {errors.start_date && (
                   <p className="text-sm text-red-500">{errors.start_date.message}</p>
@@ -214,131 +175,104 @@ export function CreateHackathon() {
                 <Label htmlFor="end_date">End Date *</Label>
                 <Input
                   id="end_date"
-                  type="datetime-local"
+                  placeholder="Sep 3, 2025"
                   {...register('end_date')}
                   disabled={isSubmitting}
-                  className="text-sm sm:text-base"
                 />
                 {errors.end_date && (
                   <p className="text-sm text-red-500">{errors.end_date.message}</p>
                 )}
               </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="duration">Duration *</Label>
+                <Input
+                  id="duration"
+                  placeholder="48 hours"
+                  {...register('duration')}
+                  disabled={isSubmitting}
+                />
+                {errors.duration && (
+                  <p className="text-sm text-red-500">{errors.duration.message}</p>
+                )}
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label htmlFor="location">Location</Label>
+                <Label htmlFor="location">Location *</Label>
                 <Input
                   id="location"
-                  placeholder="Event location"
+                  placeholder="Online / City, Country"
                   {...register('location')}
                   disabled={isSubmitting}
-                  className="text-sm sm:text-base"
                 />
+                {errors.location && (
+                  <p className="text-sm text-red-500">{errors.location.message}</p>
+                )}
               </div>
 
               <div className="space-y-2">
-                <Label>Status</Label>
-                <Select
-                  onValueChange={(value: HackathonStatus) => setValue('status', value)}
-                  defaultValue="draft"
-                >
-                  <SelectTrigger className="text-sm sm:text-base">
+                <Label htmlFor="status">Status *</Label>
+                <Select onValueChange={(value) => setValue('status', value)} defaultValue="upcoming">
+                  <SelectTrigger>
                     <SelectValue placeholder="Select status" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="draft">Draft</SelectItem>
                     <SelectItem value="upcoming">Upcoming</SelectItem>
                     <SelectItem value="live">Live</SelectItem>
-                    <SelectItem value="past">Past</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                    <SelectItem value="draft">Draft</SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-              <div className="space-y-2">
-                <Label htmlFor="prize_pool">Prize Pool</Label>
-                <Input
-                  id="prize_pool"
-                  placeholder="e.g., $10,000 total prizes"
-                  {...register('prize_pool')}
-                  disabled={isSubmitting}
-                  className="text-sm sm:text-base"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="max_team_size">Max Team Size</Label>
-                <Input
-                  id="max_team_size"
-                  type="number"
-                  min="1"
-                  placeholder="Maximum team size"
-                  {...register('max_team_size', { valueAsNumber: true })}
-                  disabled={isSubmitting}
-                  className="text-sm sm:text-base"
-                />
+                {errors.status && (
+                  <p className="text-sm text-red-500">{errors.status.message}</p>
+                )}
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="registration_link">Registration Link</Label>
+              <Label htmlFor="focus_areas_text">Focus Areas *</Label>
               <Input
-                id="registration_link"
-                type="url"
-                placeholder="https://example.com/register"
-                {...register('registration_link')}
+                id="focus_areas_text"
+                placeholder="AI/ML, Web Development, Mobile Apps, Blockchain"
+                {...register('focus_areas_text')}
                 disabled={isSubmitting}
-                className="text-sm sm:text-base"
               />
-              {errors.registration_link && (
-                <p className="text-sm text-red-500">{errors.registration_link.message}</p>
+              <p className="text-xs text-muted-foreground">
+                Enter comma-separated focus areas
+              </p>
+              {errors.focus_areas_text && (
+                <p className="text-sm text-red-500">{errors.focus_areas_text.message}</p>
               )}
             </div>
 
-            <div className="space-y-2">
-              <Label>Cover Image</Label>
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6">
-                {coverImageUrl ? (
-                  <div className="relative">
-                    <img
-                      src={coverImageUrl}
-                      alt="Cover"
-                      className="max-w-full h-48 object-cover rounded-lg"
-                    />
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      size="sm"
-                      onClick={removeCoverImage}
-                      className="absolute top-2 right-2"
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="text-center">
-                    <Upload className="mx-auto h-12 w-12 text-gray-400" />
-                    <div className="mt-4">
-                      <label htmlFor="cover-image" className="cursor-pointer">
-                        <span className="mt-2 block text-sm font-medium text-gray-900">
-                          {isUploading ? 'Uploading...' : 'Upload a cover image'}
-                        </span>
-                      </label>
-                      <input
-                        id="cover-image"
-                        type="file"
-                        className="hidden"
-                        accept="image/*"
-                        onChange={handleFileChange}
-                        disabled={isUploading || isSubmitting}
-                      />
-                    </div>
-                    <p className="mt-1 text-xs text-gray-500">
-                      PNG, JPG, GIF up to 10MB
-                    </p>
-                  </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="devpost_url">Devpost URL *</Label>
+                <Input
+                  id="devpost_url"
+                  type="url"
+                  placeholder="https://hackathon-name.devpost.com"
+                  {...register('devpost_url')}
+                  disabled={isSubmitting}
+                />
+                {errors.devpost_url && (
+                  <p className="text-sm text-red-500">{errors.devpost_url.message}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="devpost_register_url">Devpost Register URL *</Label>
+                <Input
+                  id="devpost_register_url"
+                  type="url"
+                  placeholder="https://hackathon-name.devpost.com/register"
+                  {...register('devpost_register_url')}
+                  disabled={isSubmitting}
+                />
+                {errors.devpost_register_url && (
+                  <p className="text-sm text-red-500">{errors.devpost_register_url.message}</p>
                 )}
               </div>
             </div>
@@ -346,7 +280,7 @@ export function CreateHackathon() {
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
               <Button
                 type="submit"
-                disabled={isSubmitting || isUploading}
+                disabled={isSubmitting}
                 className="flex-1 text-sm sm:text-base"
               >
                 {isSubmitting ? 'Creating...' : 'Create Hackathon'}

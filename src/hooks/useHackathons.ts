@@ -7,6 +7,9 @@ import {
   updateHackathon,
   deleteHackathon,
   uploadHackathonCoverImage,
+  createHackathonV2,
+  getHackathonByIdV2,
+  updateHackathonV2,
 } from '@/lib/hackathonApi'
 
 export const HACKATHON_KEYS = {
@@ -28,6 +31,14 @@ export function useHackathon(id: string) {
   return useQuery({
     queryKey: HACKATHON_KEYS.detail(id),
     queryFn: () => getHackathonById(id),
+    enabled: !!id,
+  })
+}
+
+export function useHackathonV2(id: string) {
+  return useQuery({
+    queryKey: HACKATHON_KEYS.detail(`v2-${id}`),
+    queryFn: () => getHackathonByIdV2(id),
     enabled: !!id,
   })
 }
@@ -63,6 +74,22 @@ export function useUpdateHackathon() {
   })
 }
 
+export function useUpdateHackathonV2() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: updateHackathonV2,
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: HACKATHON_KEYS.lists() })
+      queryClient.invalidateQueries({ queryKey: HACKATHON_KEYS.detail(`v2-${data.id}`) })
+      toast.success('Hackathon updated successfully!')
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to update hackathon: ${error.message}`)
+    },
+  })
+}
+
 export function useDeleteHackathon() {
   const queryClient = useQueryClient()
   
@@ -83,6 +110,21 @@ export function useUploadHackathonImage() {
     mutationFn: uploadHackathonCoverImage,
     onError: (error: Error) => {
       toast.error(`Failed to upload image: ${error.message}`)
+    },
+  })
+}
+
+export function useCreateHackathonV2() {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: createHackathonV2,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: HACKATHON_KEYS.lists() })
+      toast.success('Hackathon created successfully!')
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to create hackathon: ${error.message}`)
     },
   })
 }
