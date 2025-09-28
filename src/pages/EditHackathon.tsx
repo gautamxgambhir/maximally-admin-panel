@@ -209,7 +209,7 @@ export function EditHackathon() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="upcoming">Upcoming</SelectItem>
-                    <SelectItem value="live">Live</SelectItem>
+                    <SelectItem value="ongoing">Live</SelectItem>
                     <SelectItem value="completed">Completed</SelectItem>
                     <SelectItem value="draft">Draft</SelectItem>
                   </SelectContent>

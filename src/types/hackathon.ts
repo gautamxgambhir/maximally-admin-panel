@@ -1,4 +1,4 @@
-export type HackathonStatus = 'draft' | 'upcoming' | 'live' | 'past'
+export type HackathonStatus = 'draft' | 'upcoming' | 'ongoing' | 'past'
 
 // Legacy interface for backward compatibility
 export interface Hackathon {

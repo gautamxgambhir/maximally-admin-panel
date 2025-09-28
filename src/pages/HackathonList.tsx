@@ -40,7 +40,7 @@ export function HackathonList() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'live':
+      case 'ongoing':
         return 'bg-green-100 text-green-800'
       case 'upcoming':
         return 'bg-blue-100 text-blue-800'

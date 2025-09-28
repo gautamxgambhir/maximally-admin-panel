@@ -18,7 +18,7 @@ export function Dashboard() {
     publishedBlogs: blogs.filter(blog => blog.status === 'published').length,
     draftBlogs: blogs.filter(blog => blog.status === 'draft').length,
     totalHackathons: hackathons.length,
-    liveHackathons: hackathons.filter(hackathon => hackathon.status === 'live').length,
+    liveHackathons: hackathons.filter(hackathon => hackathon.status === 'ongoing').length,
     upcomingHackathons: hackathons.filter(hackathon => hackathon.status === 'upcoming').length,
   }
 
