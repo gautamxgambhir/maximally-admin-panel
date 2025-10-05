@@ -65,7 +65,9 @@ export function useUpdateHackathon() {
     mutationFn: updateHackathon,
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: HACKATHON_KEYS.lists() })
-      queryClient.invalidateQueries({ queryKey: HACKATHON_KEYS.detail(data.id) })
+      if (data && (data as any).id !== undefined) {
+        queryClient.invalidateQueries({ queryKey: HACKATHON_KEYS.detail((data as any).id) })
+      }
       toast.success('Hackathon updated successfully!')
     },
     onError: (error: Error) => {
@@ -81,7 +83,9 @@ export function useUpdateHackathonV2() {
     mutationFn: updateHackathonV2,
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: HACKATHON_KEYS.lists() })
-      queryClient.invalidateQueries({ queryKey: HACKATHON_KEYS.detail(`v2-${data.id}`) })
+      if (data && (data as any).id !== undefined) {
+        queryClient.invalidateQueries({ queryKey: HACKATHON_KEYS.detail(`v2-${(data as any).id}`) })
+      }
       toast.success('Hackathon updated successfully!')
     },
     onError: (error: Error) => {

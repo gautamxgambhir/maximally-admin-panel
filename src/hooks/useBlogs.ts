@@ -54,7 +54,9 @@ export function useUpdateBlog() {
     mutationFn: updateBlog,
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: BLOG_KEYS.lists() })
-      queryClient.invalidateQueries({ queryKey: BLOG_KEYS.detail(data.id) })
+      if (data && (data as any).id !== undefined) {
+        queryClient.invalidateQueries({ queryKey: BLOG_KEYS.detail((data as any).id) })
+      }
       toast.success('Blog updated successfully!')
     },
     onError: (error: Error) => {

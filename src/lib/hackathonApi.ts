@@ -37,10 +37,11 @@ export async function createHackathon(hackathonData: CreateHackathonData): Promi
     .from('hackathons')
     .insert(hackathonData)
     .select()
-    .single()
-  
+
   if (error) throw error
-  return data
+  const row = Array.isArray(data) ? data[0] : data
+  if (!row) throw new Error('No row returned from hackathon insert')
+  return row as Hackathon
 }
 
 export async function updateHackathon(hackathonData: UpdateHackathonData): Promise<Hackathon> {
@@ -50,10 +51,11 @@ export async function updateHackathon(hackathonData: UpdateHackathonData): Promi
     .update(updateData)
     .eq('id', id)
     .select()
-    .single()
-  
+
   if (error) throw error
-  return data
+  const row = Array.isArray(data) ? data[0] : data
+  if (!row) throw new Error('No row returned from hackathon update')
+  return row as Hackathon
 }
 
 export async function deleteHackathon(id: string): Promise<void> {
@@ -115,10 +117,11 @@ export async function createHackathonV2(hackathonData: CreateHackathonV2Data): P
     .from('hackathons')
     .insert(hackathonData)
     .select()
-    .single()
-  
+
   if (error) throw error
-  return data
+  const row = Array.isArray(data) ? data[0] : data
+  if (!row) throw new Error('No row returned from hackathon v2 insert')
+  return row as HackathonV2
 }
 
 export async function updateHackathonV2(hackathonData: UpdateHackathonV2Data): Promise<HackathonV2> {
@@ -128,7 +131,11 @@ export async function updateHackathonV2(hackathonData: UpdateHackathonV2Data): P
     .update(updateData)
     .eq('id', id)
     .select()
-    .single()
   if (error) throw error
-  return data
+  const row = Array.isArray(data) ? data[0] : data
+  if (!row) {
+    // This commonly happens when RLS/policies prevent the update from returning rows
+    throw new Error('No row returned from hackathon v2 update — this may be due to RLS/policies preventing the authenticated role from seeing the updated row')
+  }
+  return row as HackathonV2
 }
