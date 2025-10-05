@@ -23,8 +23,8 @@ export function Dashboard() {
     getDashboard()
       .then((row) => {
         if (row) {
-          if (row.feartured_hackathon_id !== null && row.feartured_hackathon_id !== undefined) {
-            setSelectedFeaturedId(String(row.feartured_hackathon_id))
+          if (row.featured_hackathon_id !== null && row.featured_hackathon_id !== undefined) {
+            setSelectedFeaturedId(String(row.featured_hackathon_id))
           }
           if (row.featured_hackathon_name) {
             setSelectedFeaturedName(row.featured_hackathon_name)
