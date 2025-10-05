@@ -1,15 +1,38 @@
 import { Link } from 'react-router-dom'
+import { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useBlogs } from '@/hooks/useBlogs'
 import { useHackathons } from '@/hooks/useHackathons'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { FileText, Plus, Edit, Users, Trophy, Calendar } from 'lucide-react'
+import { getDashboard, setFeaturedHackathon } from '@/lib/dashboardApi'
 
 export function Dashboard() {
   const { user } = useAuth()
   const { data: blogs = [], isLoading: blogsLoading } = useBlogs()
   const { data: hackathons = [], isLoading: hackathonsLoading } = useHackathons()
+  const [selectedFeaturedId, setSelectedFeaturedId] = useState<string>('')
+  const [selectedFeaturedName, setSelectedFeaturedName] = useState<string>('')
+  const [savingFeatured, setSavingFeatured] = useState<boolean>(false)
+
+  useEffect(() => {
+    // load existing featured hackathon from dashboard table
+    getDashboard()
+      .then((row) => {
+        if (row) {
+          if (row.feartured_hackathon_id !== null && row.feartured_hackathon_id !== undefined) {
+            setSelectedFeaturedId(String(row.feartured_hackathon_id))
+          }
+          if (row.featured_hackathon_name) {
+            setSelectedFeaturedName(row.featured_hackathon_name)
+          }
+        }
+      })
+      .catch(() => {})
+  }, [])
 
   const isLoading = blogsLoading || hackathonsLoading
 
@@ -152,6 +175,63 @@ export function Dashboard() {
 
       {/* Recent Content */}
       <div className="grid gap-6 md:grid-cols-2">
+        {/* Featured Hackathon Box */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Featured Hackathon</CardTitle>
+            <CardDescription>
+              Select a hackathon to feature on the site
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="featured-hackathon">Featured Hackathon</Label>
+                <Select
+                  value={selectedFeaturedId}
+                  onValueChange={(val) => {
+                    setSelectedFeaturedId(val)
+                    const found = hackathons.find((h) => String((h as any).id) === val)
+                    setSelectedFeaturedName(((found as any)?.title) || ((found as any)?.name) || '')
+                  }}
+                >
+                  <SelectTrigger id="featured-hackathon">
+                    <SelectValue placeholder="Select hackathon" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {hackathons.map((h) => {
+                      const idStr = String((h as any).id)
+                      const label = (h as any).title || (h as any).name
+                      return (
+                        <SelectItem key={idStr} value={idStr}>
+                          {label}
+                        </SelectItem>
+                      )
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Button
+                  onClick={async () => {
+                    setSavingFeatured(true)
+                    try {
+                      await setFeaturedHackathon({
+                        id: selectedFeaturedId ? Number(selectedFeaturedId) : null,
+                        name: selectedFeaturedName || null,
+                      })
+                    } finally {
+                      setSavingFeatured(false)
+                    }
+                  }}
+                  disabled={!selectedFeaturedId || savingFeatured}
+                >
+                  {savingFeatured ? 'Updating...' : 'Update'}
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
         {/* Recent Blogs */}
         <Card>
         <CardHeader>
