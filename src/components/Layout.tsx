@@ -7,7 +7,8 @@ import {
   Plus, 
   LogOut,
   Menu,
-  Trophy
+  Trophy,
+  Users
 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -22,8 +23,12 @@ export function Layout({ children }: LayoutProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
   const handleSignOut = async () => {
-    await signOut()
-    navigate('/login')
+    const confirmSignOut = window.confirm('Are you sure you want to sign out? You will need to log in again to access the admin panel.')
+    
+    if (confirmSignOut) {
+      await signOut()
+      navigate('/login')
+    }
   }
 
   const navigationItems = [
@@ -51,6 +56,11 @@ export function Layout({ children }: LayoutProps) {
       name: 'Create Hackathon',
       href: '/hackathons/create',
       icon: Plus,
+    },
+    {
+      name: 'Admin Management',
+      href: '/admin-management',
+      icon: Users,
     },
   ]
 

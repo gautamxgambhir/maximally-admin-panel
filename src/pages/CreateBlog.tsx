@@ -194,7 +194,7 @@ export function CreateBlog() {
                   id="reading_time_minutes"
                   type="number"
                   min="1"
-                  placeholder="5"
+                  placeholder="5 (leave empty for auto)"
                   {...register('reading_time_minutes')}
                   disabled={isSubmitting}
                   className="text-sm sm:text-base"

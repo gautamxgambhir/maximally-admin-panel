@@ -55,7 +55,7 @@ export function Login() {
             Maximally Admin
           </CardTitle>
           <CardDescription className="text-center">
-            Sign in to manage blog posts
+            Sign in with admin credentials to access the admin panel
           </CardDescription>
         </CardHeader>
         <CardContent>

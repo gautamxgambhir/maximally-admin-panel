@@ -7,6 +7,7 @@ import { EditBlog } from './pages/EditBlog'
 import { HackathonList } from './pages/HackathonList'
 import { CreateHackathon } from './pages/CreateHackathon'
 import { EditHackathon } from './pages/EditHackathon'
+import { AdminManagement } from './pages/AdminManagement'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { Layout } from './components/Layout'
 
@@ -81,6 +82,16 @@ function App() {
           <ProtectedRoute>
             <Layout>
               <EditHackathon />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin-management"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <AdminManagement />
             </Layout>
           </ProtectedRoute>
         }

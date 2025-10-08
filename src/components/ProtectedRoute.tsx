@@ -7,23 +7,23 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { user, loading } = useAuth()
+  const { user, isAdmin, loading, roleChecking } = useAuth()
   const location = useLocation()
 
-  if (loading) {
+  if (loading || roleChecking) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Card className="w-full max-w-md">
           <CardContent className="p-8 text-center">
             <div className="animate-spin h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p>Loading...</p>
+            <p>{roleChecking ? 'Verifying admin access...' : 'Loading...'}</p>
           </CardContent>
         </Card>
       </div>
     )
   }
 
-  if (!user) {
+  if (!user || !isAdmin) {
     return <Navigate to="/login" state={{ from: location }} replace />
   }
 
