@@ -8,7 +8,8 @@ import {
   LogOut,
   Menu,
   Trophy,
-  Users
+  Users,
+  UserCheck
 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -56,6 +57,11 @@ export function Layout({ children }: LayoutProps) {
       name: 'Create Hackathon',
       href: '/hackathons/create',
       icon: Plus,
+    },
+    {
+      name: 'People',
+      href: '/people',
+      icon: UserCheck,
     },
     {
       name: 'Admin Management',
