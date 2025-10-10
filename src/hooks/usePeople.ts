@@ -6,7 +6,6 @@ import {
   createPerson,
   updatePerson,
   deletePerson,
-  togglePersonStatus,
   reorderPeople,
   getCategoryCounts,
   type Person,
@@ -146,42 +145,6 @@ export function useDeletePerson() {
   })
 }
 
-// Toggle person status mutation
-export function useTogglePersonStatus() {
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: togglePersonStatus,
-    onSuccess: (updatedPerson) => {
-      // Update the specific person in cache
-      queryClient.setQueryData(
-        peopleKeys.detail(updatedPerson.id),
-        updatedPerson
-      )
-
-      // Update list queries
-      queryClient.setQueriesData(
-        { queryKey: peopleKeys.lists() },
-        (oldData: Person[] | undefined) => {
-          if (!oldData) return []
-          return oldData.map(person =>
-            person.id === updatedPerson.id ? updatedPerson : person
-          )
-        }
-      )
-
-      queryClient.invalidateQueries({ queryKey: peopleKeys.counts() })
-      
-      toast.success(
-        `Person ${updatedPerson.is_active ? 'activated' : 'deactivated'} successfully!`
-      )
-    },
-    onError: (error) => {
-      console.error('Error toggling person status:', error)
-      toast.error('Failed to update person status. Please try again.')
-    },
-  })
-}
 
 // Reorder people mutation
 export function useReorderPeople() {

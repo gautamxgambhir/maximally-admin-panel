@@ -9,7 +9,8 @@ import {
   Menu,
   Trophy,
   Users,
-  UserCheck
+  UserCheck,
+  Scale
 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -62,6 +63,11 @@ export function Layout({ children }: LayoutProps) {
       name: 'People',
       href: '/people',
       icon: UserCheck,
+    },
+    {
+      name: 'Judges',
+      href: '/judges',
+      icon: Scale,
     },
     {
       name: 'Admin Management',

@@ -3,38 +3,66 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useBlogs } from '@/hooks/useBlogs'
 import { useHackathons } from '@/hooks/useHackathons'
+import { usePeople } from '@/hooks/usePeople'
+import { useGeneralJudges } from '@/hooks/useGeneralJudges'
+import { useDashboard, useSetFeaturedCore, useSetFeaturedJudges } from '@/hooks/useDashboard'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { FileText, Plus, Edit, Users, Trophy, Calendar } from 'lucide-react'
+import { PersonSelector } from '@/components/PersonSelector'
+import { JudgeSelector } from '@/components/JudgeSelector'
+import { FileText, Plus, Edit, Users, Trophy, Calendar, UserCheck, Scale } from 'lucide-react'
 import { getDashboard, setFeaturedHackathon } from '@/lib/dashboardApi'
 
 export function Dashboard() {
   const { user } = useAuth()
   const { data: blogs = [], isLoading: blogsLoading } = useBlogs()
   const { data: hackathons = [], isLoading: hackathonsLoading } = useHackathons()
+  const { data: people = [], isLoading: peopleLoading } = usePeople()
+  const { data: judges = [], isLoading: judgesLoading } = useGeneralJudges()
+  const { data: dashboard } = useDashboard()
+  const setFeaturedCore = useSetFeaturedCore()
+  const setFeaturedJudges = useSetFeaturedJudges()
+  
   const [selectedFeaturedId, setSelectedFeaturedId] = useState<string>('')
   const [selectedFeaturedName, setSelectedFeaturedName] = useState<string>('')
   const [savingFeatured, setSavingFeatured] = useState<boolean>(false)
+  
+  // Featured core team state
+  const [coreId1, setCoreId1] = useState<number | null>(null)
+  const [coreId2, setCoreId2] = useState<number | null>(null)
+  const [coreId3, setCoreId3] = useState<number | null>(null)
+  
+  // Featured judges state
+  const [judgeId1, setJudgeId1] = useState<number | null>(null)
+  const [judgeId2, setJudgeId2] = useState<number | null>(null)
+  const [judgeId3, setJudgeId3] = useState<number | null>(null)
 
   useEffect(() => {
-    // load existing featured hackathon from dashboard table
-    getDashboard()
-      .then((row) => {
-        if (row) {
-          if (row.featured_hackathon_id !== null && row.featured_hackathon_id !== undefined) {
-            setSelectedFeaturedId(String(row.featured_hackathon_id))
-          }
-          if (row.featured_hackathon_name) {
-            setSelectedFeaturedName(row.featured_hackathon_name)
-          }
-        }
-      })
-      .catch(() => {})
-  }, [])
+    // load existing featured data from dashboard table
+    if (dashboard) {
+      // Featured hackathon
+      if (dashboard.featured_hackathon_id !== null && dashboard.featured_hackathon_id !== undefined) {
+        setSelectedFeaturedId(String(dashboard.featured_hackathon_id))
+      }
+      if (dashboard.featured_hackathon_name) {
+        setSelectedFeaturedName(dashboard.featured_hackathon_name)
+      }
+      
+      // Featured core team
+      setCoreId1(dashboard.featured_core_id_1)
+      setCoreId2(dashboard.featured_core_id_2)
+      setCoreId3(dashboard.featured_core_id_3)
+      
+      // Featured judges
+      setJudgeId1(dashboard.featured_judge_id_1)
+      setJudgeId2(dashboard.featured_judge_id_2)
+      setJudgeId3(dashboard.featured_judge_id_3)
+    }
+  }, [dashboard])
 
-  const isLoading = blogsLoading || hackathonsLoading
+  const isLoading = blogsLoading || hackathonsLoading || peopleLoading || judgesLoading
 
   const stats = {
     totalBlogs: blogs.length,
@@ -168,6 +196,121 @@ export function Dashboard() {
                   Create Hackathon
                 </Link>
               </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Featured Sections */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Featured Core Team */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <UserCheck className="h-5 w-5" />
+              Featured Core Team
+            </CardTitle>
+            <CardDescription>
+              Select 3 core team members to feature on the site
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4">
+              <PersonSelector
+                people={people}
+                value={coreId1}
+                onValueChange={setCoreId1}
+                label="Core Member 1"
+                placeholder="Select first core member..."
+              />
+              <PersonSelector
+                people={people}
+                value={coreId2}
+                onValueChange={setCoreId2}
+                label="Core Member 2"
+                placeholder="Select second core member..."
+              />
+              <PersonSelector
+                people={people}
+                value={coreId3}
+                onValueChange={setCoreId3}
+                label="Core Member 3"
+                placeholder="Select third core member..."
+              />
+              <div>
+                <Button
+                  onClick={async () => {
+                    try {
+                      await setFeaturedCore.mutateAsync({
+                        coreId1,
+                        coreId2,
+                        coreId3
+                      })
+                    } catch (error) {
+                      console.error('Failed to update featured core:', error)
+                    }
+                  }}
+                  disabled={setFeaturedCore.isPending}
+                >
+                  {setFeaturedCore.isPending ? 'Updating...' : 'Update Core Team'}
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Featured Judges */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Scale className="h-5 w-5" />
+              Featured Judges
+            </CardTitle>
+            <CardDescription>
+              Select 3 judges to feature on the site
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4">
+              <JudgeSelector
+                judges={judges}
+                value={judgeId1}
+                onValueChange={setJudgeId1}
+                label="Judge 1"
+                placeholder="Select first judge..."
+              />
+              <JudgeSelector
+                judges={judges}
+                value={judgeId2}
+                onValueChange={setJudgeId2}
+                label="Judge 2"
+                placeholder="Select second judge..."
+              />
+              <JudgeSelector
+                judges={judges}
+                value={judgeId3}
+                onValueChange={setJudgeId3}
+                label="Judge 3"
+                placeholder="Select third judge..."
+              />
+              <div>
+                <Button
+                  onClick={async () => {
+                    try {
+                      await setFeaturedJudges.mutateAsync({
+                        judgeId1,
+                        judgeId2,
+                        judgeId3
+                      })
+                    } catch (error) {
+                      console.error('Failed to update featured judges:', error)
+                    }
+                  }}
+                  disabled={setFeaturedJudges.isPending}
+                >
+                  {setFeaturedJudges.isPending ? 'Updating...' : 'Update Judges'}
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>

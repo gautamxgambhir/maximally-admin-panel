@@ -9,13 +9,11 @@ export interface Person {
   company?: string
   description?: string
   category: PersonCategory
-  image_url?: string
   linkedin_url?: string
   twitter_url?: string
   github_url?: string
   website_url?: string
   display_order: number
-  is_active: boolean
   created_at: string
   updated_at: string
 }
@@ -26,13 +24,11 @@ export interface PersonInput {
   company?: string
   description?: string
   category: PersonCategory
-  image_url?: string
   linkedin_url?: string
   twitter_url?: string
   github_url?: string
   website_url?: string
   display_order?: number
-  is_active?: boolean
 }
 
 export interface PersonUpdate extends Partial<PersonInput> {
@@ -57,13 +53,12 @@ export async function getPeople(category?: PersonCategory): Promise<Person[]> {
   return data || []
 }
 
-// Get people by category for public display (only active)
+// Get people by category for public display
 export async function getPeopleByCategory(category: PersonCategory): Promise<Person[]> {
   const { data, error } = await supabase
     .from('people')
     .select('*')
     .eq('category', category)
-    .eq('is_active', true)
     .order('display_order', { ascending: true })
     .order('created_at', { ascending: true })
 
@@ -89,8 +84,7 @@ export async function createPerson(person: PersonInput): Promise<Person> {
     .from('people')
     .insert([{
       ...person,
-      display_order: person.display_order ?? 0,
-      is_active: person.is_active ?? true
+      display_order: person.display_order ?? 0
     }])
     .select('*')
     .single()
@@ -127,26 +121,6 @@ export async function deletePerson(id: number): Promise<void> {
   if (error) throw error
 }
 
-// Toggle person active status
-export async function togglePersonStatus(id: number): Promise<Person> {
-  // First get the current status
-  const person = await getPerson(id)
-  if (!person) throw new Error('Person not found')
-
-  // Toggle the status
-  const { data, error } = await supabase
-    .from('people')
-    .update({
-      is_active: !person.is_active,
-      updated_at: new Date().toISOString()
-    })
-    .eq('id', id)
-    .select('*')
-    .single()
-
-  if (error) throw error
-  return data
-}
 
 // Reorder people within a category
 export async function reorderPeople(updates: { id: number; display_order: number }[]): Promise<void> {

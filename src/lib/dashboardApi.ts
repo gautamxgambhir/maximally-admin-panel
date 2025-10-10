@@ -4,12 +4,28 @@ export interface DashboardRow {
   id: number
   featured_hackathon_name: string | null
   featured_hackathon_id: number | null
+  featured_core_id_1: number | null
+  featured_core_id_2: number | null
+  featured_core_id_3: number | null
+  featured_judge_id_1: number | null
+  featured_judge_id_2: number | null
+  featured_judge_id_3: number | null
 }
 
 export async function getDashboard(): Promise<DashboardRow | null> {
   const { data, error } = await supabase
     .from('dashboard')
-    .select('id, featured_hackathon_name, featured_hackathon_id')
+    .select(`
+      id, 
+      featured_hackathon_name, 
+      featured_hackathon_id,
+      featured_core_id_1,
+      featured_core_id_2,
+      featured_core_id_3,
+      featured_judge_id_1,
+      featured_judge_id_2,
+      featured_judge_id_3
+    `)
     .eq('id', 1)
     .maybeSingle()
 
@@ -22,7 +38,81 @@ export async function setFeaturedHackathon(params: { id: number | null, name: st
   const { data, error } = await supabase
     .from('dashboard')
     .upsert(payload, { onConflict: 'id' })
-    .select('id, featured_hackathon_name, featured_hackathon_id')
+    .select(`
+      id, 
+      featured_hackathon_name, 
+      featured_hackathon_id,
+      featured_core_id_1,
+      featured_core_id_2,
+      featured_core_id_3,
+      featured_judge_id_1,
+      featured_judge_id_2,
+      featured_judge_id_3
+    `)
+    .single()
+
+  if (error) throw error
+  return data as DashboardRow
+}
+
+// Update featured core team
+export async function setFeaturedCore(params: {
+  coreId1: number | null
+  coreId2: number | null
+  coreId3: number | null
+}): Promise<DashboardRow> {
+  const payload = {
+    id: 1,
+    featured_core_id_1: params.coreId1,
+    featured_core_id_2: params.coreId2,
+    featured_core_id_3: params.coreId3
+  }
+  const { data, error } = await supabase
+    .from('dashboard')
+    .upsert(payload, { onConflict: 'id' })
+    .select(`
+      id, 
+      featured_hackathon_name, 
+      featured_hackathon_id,
+      featured_core_id_1,
+      featured_core_id_2,
+      featured_core_id_3,
+      featured_judge_id_1,
+      featured_judge_id_2,
+      featured_judge_id_3
+    `)
+    .single()
+
+  if (error) throw error
+  return data as DashboardRow
+}
+
+// Update featured judges
+export async function setFeaturedJudges(params: {
+  judgeId1: number | null
+  judgeId2: number | null
+  judgeId3: number | null
+}): Promise<DashboardRow> {
+  const payload = {
+    id: 1,
+    featured_judge_id_1: params.judgeId1,
+    featured_judge_id_2: params.judgeId2,
+    featured_judge_id_3: params.judgeId3
+  }
+  const { data, error } = await supabase
+    .from('dashboard')
+    .upsert(payload, { onConflict: 'id' })
+    .select(`
+      id, 
+      featured_hackathon_name, 
+      featured_hackathon_id,
+      featured_core_id_1,
+      featured_core_id_2,
+      featured_core_id_3,
+      featured_judge_id_1,
+      featured_judge_id_2,
+      featured_judge_id_3
+    `)
     .single()
 
   if (error) throw error

@@ -9,6 +9,7 @@ import { CreateHackathon } from './pages/CreateHackathon'
 import { EditHackathon } from './pages/EditHackathon'
 import { AdminManagement } from './pages/AdminManagement'
 import { PeopleManagement } from './pages/PeopleManagement'
+import { JudgesManagement } from './pages/JudgesManagement'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { Layout } from './components/Layout'
 
@@ -103,6 +104,16 @@ function App() {
           <ProtectedRoute>
             <Layout>
               <PeopleManagement />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/judges"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <JudgesManagement />
             </Layout>
           </ProtectedRoute>
         }

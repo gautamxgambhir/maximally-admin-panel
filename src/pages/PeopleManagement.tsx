@@ -79,7 +79,7 @@ export function PeopleManagement() {
 
   const handleCreatePerson = async (data: PersonInput) => {
     try {
-      await createPerson.mutateAsync({ ...data, category: activeTab })
+      await createPerson.mutateAsync(data)
       setIsCreateDialogOpen(false)
     } catch (error) {
       console.error('Failed to create person:', error)
