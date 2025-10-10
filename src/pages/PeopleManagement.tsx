@@ -64,7 +64,7 @@ export function PeopleManagement() {
 
   // Hooks
   const { data: people = [], isLoading } = usePeople(activeTab)
-  const { data: counts = {} } = useCategoryCounts()
+  const { data: counts = {} as Record<PersonCategory, number> } = useCategoryCounts()
   const createPerson = useCreatePerson()
   const updatePerson = useUpdatePerson()
   const deletePerson = useDeletePerson()
@@ -184,19 +184,11 @@ export function PeopleManagement() {
                         <TableRow key={person.id}>
                           <TableCell>
                             <div className="flex items-center gap-3">
-                              {person.image_url ? (
-                                <img
-                                  src={person.image_url}
-                                  alt={person.name}
-                                  className="w-8 h-8 rounded-full object-cover"
-                                />
-                              ) : (
-                                <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
-                                  <span className="text-xs font-medium text-gray-600">
-                                    {person.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
-                                  </span>
-                                </div>
-                              )}
+                              <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
+                                <span className="text-xs font-medium text-gray-600">
+                                  {person.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                                </span>
+                              </div>
                               <div>
                                 <div className="font-medium">{person.name}</div>
                                 <div className="text-sm text-gray-500 flex items-center gap-1">
