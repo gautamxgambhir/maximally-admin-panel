@@ -82,7 +82,7 @@ export function PeopleManagement() {
       await createPerson.mutateAsync(data)
       setIsCreateDialogOpen(false)
     } catch (error) {
-      console.error('Failed to create person:', error)
+      // Error handling is done in the hook with toast notifications
     }
   }
 
@@ -93,7 +93,7 @@ export function PeopleManagement() {
       await updatePerson.mutateAsync({ ...data, id: editingPerson.id })
       setEditingPerson(null)
     } catch (error) {
-      console.error('Failed to update person:', error)
+      // Error handling is done in the hook with toast notifications
     }
   }
 
@@ -104,7 +104,7 @@ export function PeopleManagement() {
       await deletePerson.mutateAsync(deletingPerson.id)
       setDeletingPerson(null)
     } catch (error) {
-      console.error('Failed to delete person:', error)
+      // Error handling is done in the hook with toast notifications
     }
   }
 

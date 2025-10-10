@@ -247,7 +247,7 @@ export function Dashboard() {
                         coreId3
                       })
                     } catch (error) {
-                      console.error('Failed to update featured core:', error)
+                      // Error handling is done in the hook with toast notifications
                     }
                   }}
                   disabled={setFeaturedCore.isPending}
@@ -303,7 +303,7 @@ export function Dashboard() {
                         judgeId3
                       })
                     } catch (error) {
-                      console.error('Failed to update featured judges:', error)
+                      // Error handling is done in the hook with toast notifications
                     }
                   }}
                   disabled={setFeaturedJudges.isPending}

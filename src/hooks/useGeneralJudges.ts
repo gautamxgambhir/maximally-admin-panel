@@ -73,7 +73,6 @@ export function useCreateGeneralJudge() {
       toast.success('Judge created successfully!')
     },
     onError: (error) => {
-      console.error('Error creating judge:', error)
       toast.error('Failed to create judge. Please try again.')
     },
   })
@@ -99,7 +98,6 @@ export function useUpdateGeneralJudge() {
       toast.success('Judge updated successfully!')
     },
     onError: (error) => {
-      console.error('Error updating judge:', error)
       toast.error('Failed to update judge. Please try again.')
     },
   })
@@ -128,7 +126,6 @@ export function useDeleteGeneralJudge() {
       toast.success('Judge deleted successfully!')
     },
     onError: (error) => {
-      console.error('Error deleting judge:', error)
       toast.error('Failed to delete judge. Please try again.')
     },
   })

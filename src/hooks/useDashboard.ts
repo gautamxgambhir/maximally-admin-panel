@@ -29,7 +29,6 @@ export function useSetFeaturedCore() {
       toast.success('Featured core team updated successfully!')
     },
     onError: (error) => {
-      console.error('Error updating featured core team:', error)
       toast.error('Failed to update featured core team. Please try again.')
     },
   })
@@ -47,7 +46,6 @@ export function useSetFeaturedJudges() {
       toast.success('Featured judges updated successfully!')
     },
     onError: (error) => {
-      console.error('Error updating featured judges:', error)
       toast.error('Failed to update featured judges. Please try again.')
     },
   })

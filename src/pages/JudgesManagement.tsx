@@ -48,7 +48,7 @@ export function JudgesManagement() {
       await createJudge.mutateAsync(data)
       setIsCreateDialogOpen(false)
     } catch (error) {
-      console.error('Failed to create judge:', error)
+      // Error handling is done in the hook with toast notifications
     }
   }
 
@@ -59,7 +59,7 @@ export function JudgesManagement() {
       await updateJudge.mutateAsync({ ...data, id: editingJudge.id })
       setEditingJudge(null)
     } catch (error) {
-      console.error('Failed to update judge:', error)
+      // Error handling is done in the hook with toast notifications
     }
   }
 
@@ -70,7 +70,7 @@ export function JudgesManagement() {
       await deleteJudge.mutateAsync(deletingJudge.id)
       setDeletingJudge(null)
     } catch (error) {
-      console.error('Failed to delete judge:', error)
+      // Error handling is done in the hook with toast notifications
     }
   }
 

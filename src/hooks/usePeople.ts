@@ -84,7 +84,6 @@ export function useCreatePerson() {
       toast.success('Person created successfully!')
     },
     onError: (error) => {
-      console.error('Error creating person:', error)
       toast.error('Failed to create person. Please try again.')
     },
   })
@@ -110,7 +109,6 @@ export function useUpdatePerson() {
       toast.success('Person updated successfully!')
     },
     onError: (error) => {
-      console.error('Error updating person:', error)
       toast.error('Failed to update person. Please try again.')
     },
   })
@@ -139,7 +137,6 @@ export function useDeletePerson() {
       toast.success('Person deleted successfully!')
     },
     onError: (error) => {
-      console.error('Error deleting person:', error)
       toast.error('Failed to delete person. Please try again.')
     },
   })
@@ -158,7 +155,6 @@ export function useReorderPeople() {
       toast.success('People reordered successfully!')
     },
     onError: (error) => {
-      console.error('Error reordering people:', error)
       toast.error('Failed to reorder people. Please try again.')
     },
   })
