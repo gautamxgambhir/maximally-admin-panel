@@ -10,6 +10,7 @@ import { EditHackathon } from './pages/EditHackathon'
 import { AdminManagement } from './pages/AdminManagement'
 import { PeopleManagement } from './pages/PeopleManagement'
 import { JudgesManagement } from './pages/JudgesManagement'
+import { Certificates } from './pages/Certificates'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { Layout } from './components/Layout'
 
@@ -114,6 +115,16 @@ function App() {
           <ProtectedRoute>
             <Layout>
               <JudgesManagement />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/certificates"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <Certificates />
             </Layout>
           </ProtectedRoute>
         }

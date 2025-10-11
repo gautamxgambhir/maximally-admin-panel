@@ -10,7 +10,8 @@ import {
   Trophy,
   Users,
   UserCheck,
-  Scale
+  Scale,
+  Award
 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -68,6 +69,11 @@ export function Layout({ children }: LayoutProps) {
       name: 'Judges',
       href: '/judges',
       icon: Scale,
+    },
+    {
+      name: 'Certificates',
+      href: '/certificates',
+      icon: Award,
     },
     {
       name: 'Admin Management',
