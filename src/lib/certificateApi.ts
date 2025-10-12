@@ -3,13 +3,17 @@ import type {
   Certificate, 
   CreateCertificateData, 
   CertificateFilters,
-  CertificateStatus 
+  CertificateStatus,
+  CertificateTemplate
 } from '@/types/certificate'
+import type { ExtendedCertificateTemplate } from '@/lib/certificateTemplates'
+import type { CustomTemplate } from '@/hooks/useCustomTemplates'
 import { 
   generateCertificateId, 
   generateCertificateFiles, 
   uploadCertificateFiles,
-  CERTIFICATE_TEMPLATES 
+  CERTIFICATE_TEMPLATES,
+  convertToCertificateTemplate
 } from './certificateUtils'
 
 /**
@@ -36,13 +40,19 @@ export async function createCertificate(data: CreateCertificateData): Promise<Ce
   // Generate unique certificate ID
   const certificateId = generateCertificateId()
   
-  // Get template for certificate type
-  const template = CERTIFICATE_TEMPLATES[data.type]
+  // Use custom template if provided, otherwise fall back to default template for certificate type
+  let template: CertificateTemplate
+  if (data.template) {
+    // Convert extended template (including custom templates) to basic template format
+    template = convertToCertificateTemplate(data.template as ExtendedCertificateTemplate | CustomTemplate)
+  } else {
+    template = CERTIFICATE_TEMPLATES[data.type]
+  }
   
   // Generate certificate files
   const { pdfBlob, jpgBlob } = await generateCertificateFiles({
     data,
-    template,
+    template: data.template || template, // Pass original template for custom template detection
     certificateId
   })
   
@@ -67,7 +77,9 @@ export async function createCertificate(data: CreateCertificateData): Promise<Ce
       jpg_url: jpgUrl,
       status: 'active',
       generated_by: user.id,
-      admin_email: profile?.email || user.email
+      admin_email: profile?.email || user.email,
+      maximally_username: data.maximally_username,
+      template_id: (data.template && 'id' in data.template && !('isCustom' in data.template)) ? data.template.id : null
     })
     .select()
     .single()

@@ -10,9 +10,11 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { Eye, Download, X } from 'lucide-react'
-import { createCertificateHTML, CERTIFICATE_TEMPLATES } from '@/lib/certificateUtils'
+import { createCertificateHTML, createCustomCertificateHTML, CERTIFICATE_TEMPLATES, convertToCertificateTemplate } from '@/lib/certificateUtils'
 import { getVerificationUrl } from '@/config/constants'
-import type { CreateCertificateData } from '@/types/certificate'
+import type { CreateCertificateData, CertificateTemplate } from '@/types/certificate'
+import type { ExtendedCertificateTemplate } from '@/lib/certificateTemplates'
+import type { CustomTemplate } from '@/hooks/useCustomTemplates'
 
 interface CertificatePreviewProps {
   data: CreateCertificateData
@@ -42,12 +44,29 @@ export function CertificatePreview({
   const generatePreview = async () => {
     setIsLoading(true)
     try {
-      const template = CERTIFICATE_TEMPLATES[data.type]
-      const html = await createCertificateHTML({
-        data,
-        template,
-        certificateId
-      })
+      // Use custom template if provided, otherwise fall back to built-in template
+      let html: string
+      
+      if (data.template && 'isCustom' in data.template && data.template.isCustom) {
+        // Use custom template rendering for custom templates
+        html = await createCustomCertificateHTML({
+          data,
+          template: convertToCertificateTemplate(data.template as CustomTemplate),
+          certificateId,
+          customTemplate: data.template as CustomTemplate
+        })
+      } else {
+        // Use standard template rendering
+        const template = data.template 
+          ? convertToCertificateTemplate(data.template as ExtendedCertificateTemplate | CustomTemplate)
+          : CERTIFICATE_TEMPLATES[data.type]
+        
+        html = await createCertificateHTML({
+          data,
+          template,
+          certificateId
+        })
+      }
       setHtmlContent(html)
     } catch (error) {
       console.error('Failed to generate preview:', error)

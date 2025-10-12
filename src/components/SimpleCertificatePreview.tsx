@@ -10,10 +10,11 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { Eye, Download, X } from 'lucide-react'
-import { createCertificateHTML, CERTIFICATE_TEMPLATES, generateCertificateId } from '@/lib/certificateUtils'
+import { createCertificateHTML, createCustomCertificateHTML, CERTIFICATE_TEMPLATES, generateCertificateId, convertToCertificateTemplate } from '@/lib/certificateUtils'
 import { getVerificationUrl } from '@/config/constants'
 import type { ExtendedCertificateTemplate } from '@/lib/certificateTemplates'
 import type { CreateCertificateData } from '@/types/certificate'
+import type { CustomTemplate } from '@/hooks/useCustomTemplates'
 
 interface SimpleCertificatePreviewProps {
   data: CreateCertificateData
@@ -43,12 +44,28 @@ export function SimpleCertificatePreview({
     setIsLoading(true)
     try {
       // Use selected template or fallback to default
-      const template = selectedTemplate || CERTIFICATE_TEMPLATES[data.type]
-      const html = await createCertificateHTML({
-        data,
-        template,
-        certificateId
-      })
+      let html: string
+      
+      if (selectedTemplate && 'isCustom' in selectedTemplate && selectedTemplate.isCustom) {
+        // Use custom template rendering for custom templates
+        html = await createCustomCertificateHTML({
+          data,
+          template: convertToCertificateTemplate(selectedTemplate),
+          certificateId,
+          customTemplate: selectedTemplate as CustomTemplate
+        })
+      } else {
+        // Use standard template rendering
+        const template = selectedTemplate 
+          ? convertToCertificateTemplate(selectedTemplate) 
+          : CERTIFICATE_TEMPLATES[data.type]
+        
+        html = await createCertificateHTML({
+          data,
+          template,
+          certificateId
+        })
+      }
       setHtmlContent(html)
     } catch (error) {
       console.error('Failed to generate preview:', error)

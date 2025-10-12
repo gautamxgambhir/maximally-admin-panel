@@ -10,6 +10,8 @@ import type {
   CertificateType,
   CreateCertificateData 
 } from '@/types/certificate'
+import type { ExtendedCertificateTemplate } from '@/lib/certificateTemplates'
+import type { CustomTemplate } from '@/hooks/useCustomTemplates'
 
 // Maximally brand colors
 const BRAND_COLORS = {
@@ -55,6 +57,39 @@ export const CERTIFICATE_TEMPLATES: Record<CertificateType, CertificateTemplate>
 }
 
 /**
+ * Convert ExtendedCertificateTemplate (including custom templates) to basic CertificateTemplate
+ * for use with certificate generation
+ */
+export function convertToCertificateTemplate(template: ExtendedCertificateTemplate | CustomTemplate): CertificateTemplate {
+  // Check if it's a custom template with templateConfig
+  if ('templateConfig' in template && template.templateConfig) {
+    const config = template.templateConfig
+    // For custom templates, we need to render them differently
+    // For now, we'll use the basic template structure but with custom colors
+    return {
+      type: template.type,
+      title: config.name || template.title,
+      subtitle: template.subtitle || 'Custom Template', 
+      description: config.description || template.description,
+      backgroundColor: template.backgroundColor,
+      primaryColor: template.primaryColor,
+      secondaryColor: template.secondaryColor
+    }
+  }
+  
+  // For built-in extended templates, extract the basic properties
+  return {
+    type: template.type,
+    title: template.title,
+    subtitle: template.subtitle,
+    description: template.description,
+    backgroundColor: template.backgroundColor,
+    primaryColor: template.primaryColor,
+    secondaryColor: template.secondaryColor
+  }
+}
+
+/**
  * Generate a unique certificate ID
  */
 export function generateCertificateId(): string {
@@ -81,6 +116,132 @@ export async function generateQRCode(certificateId: string): Promise<string> {
     console.error('Failed to generate QR code:', error)
     return ''
   }
+}
+
+/**
+ * Create certificate HTML content for custom templates
+ */
+export async function createCustomCertificateHTML(options: CertificateGenerationOptions & { customTemplate: CustomTemplate }): Promise<string> {
+  const { data, customTemplate, certificateId } = options
+  const templateConfig = customTemplate.templateConfig
+  
+  if (!templateConfig) {
+    // Fallback to regular template if no config
+    return createCertificateHTML(options)
+  }
+  
+  // Generate QR code for verification
+  const qrCodeDataUrl = await generateQRCode(certificateId)
+  
+  // Render elements with placeholder substitution
+  const renderElement = (element: any) => {
+    let content = element.content
+    
+    // Replace placeholders with actual data
+    switch (element.content) {
+      case 'participant_name':
+        content = data.participant_name
+        break
+      case 'hackathon_name':
+        content = data.hackathon_name
+        break
+      case 'position':
+        content = data.position || ''
+        break
+      case 'date':
+        content = new Date().toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        })
+        break
+      case 'signature':
+        content = 'Authorized Signature'
+        break
+      case 'organizer':
+        content = 'MAXIMALLY'
+        break
+      case 'verification_url':
+        // For QR codes, we'll handle this separately
+        break
+    }
+    
+    const style = {
+      position: 'absolute',
+      left: `${element.position.x}px`,
+      top: `${element.position.y}px`,
+      width: `${element.size.width}px`,
+      height: `${element.size.height}px`,
+      transform: `rotate(${element.rotation}deg)`,
+      zIndex: element.zIndex,
+      fontSize: `${element.style.fontSize || 16}px`,
+      fontFamily: element.style.fontFamily || 'Arial',
+      fontWeight: element.style.fontWeight || 'normal',
+      fontStyle: element.style.fontStyle || 'normal',
+      textDecoration: element.style.textDecoration || 'none',
+      textAlign: element.style.textAlign || 'left',
+      color: element.style.color || '#000000',
+      backgroundColor: element.style.backgroundColor || 'transparent',
+      border: element.style.borderWidth ? `${element.style.borderWidth}px solid ${element.style.borderColor || '#cccccc'}` : 'none',
+      borderRadius: `${element.style.borderRadius || 0}px`,
+      opacity: (element.style.opacity || 100) / 100,
+      padding: `${element.style.padding || 0}px`,
+      overflow: 'hidden',
+      wordBreak: 'break-word',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: element.style.textAlign === 'center' ? 'center' : element.style.textAlign === 'right' ? 'flex-end' : 'flex-start'
+    }
+    
+    const styleString = Object.entries(style)
+      .map(([key, value]) => `${key.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${value}`)
+      .join('; ')
+    
+    if (element.type === 'qr_code' && element.content === 'verification_url') {
+      return qrCodeDataUrl ? `
+        <div style="${styleString}">
+          <img src="${qrCodeDataUrl}" alt="Verification QR Code" style="width: 100%; height: 100%; object-fit: contain;" />
+        </div>
+      ` : ''
+    }
+    
+    if (element.type === 'image') {
+      return `
+        <div style="${styleString}">
+          <div style="width: 100%; height: 100%; background: ${element.style.backgroundColor}; border-radius: ${element.style.borderRadius || 0}px;"></div>
+        </div>
+      `
+    }
+    
+    if (element.type === 'shape') {
+      return `
+        <div style="${styleString}">
+        </div>
+      `
+    }
+    
+    return `
+      <div style="${styleString}">
+        ${content}
+      </div>
+    `
+  }
+  
+  const elementsHTML = templateConfig.elements.map(renderElement).join('')
+  
+  return `
+    <div style="
+      position: relative;
+      width: ${templateConfig.canvas.width}px;
+      height: ${templateConfig.canvas.height}px;
+      background: ${templateConfig.canvas.backgroundColor};
+      ${templateConfig.canvas.backgroundImage ? `background-image: url(${templateConfig.canvas.backgroundImage}); background-size: cover; background-position: center;` : ''}
+      font-family: Arial, sans-serif;
+      overflow: hidden;
+    ">
+      ${elementsHTML}
+    </div>
+  `
 }
 
 /**
@@ -345,7 +506,19 @@ export async function generateCertificateFiles(options: CertificateGenerationOpt
   container.style.position = 'absolute'
   container.style.left = '-9999px'
   container.style.top = '-9999px'
-  container.innerHTML = await createCertificateHTML(options)
+  
+  // Check if this is a custom template that needs special rendering
+  let htmlContent: string
+  if (options.template && 'isCustom' in options.template && options.template.isCustom) {
+    htmlContent = await createCustomCertificateHTML({
+      ...options,
+      customTemplate: options.template as CustomTemplate
+    })
+  } else {
+    htmlContent = await createCertificateHTML(options)
+  }
+  
+  container.innerHTML = htmlContent
   document.body.appendChild(container)
 
   try {

@@ -39,13 +39,14 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
-import { Plus, Upload, FileText, Users, Award, Scale, X, Eye, Palette } from 'lucide-react'
+import { Plus, Upload, FileText, Users, Award, Scale, X, Eye, Palette, HelpCircle, Info } from 'lucide-react'
 import { toast } from 'sonner'
 import { useCreateCertificate, useCreateBulkCertificates } from '@/hooks/useCertificates'
 import { SimpleCertificatePreview } from './SimpleCertificatePreview'
 import { TemplateGallery } from './TemplateGallery'
 import { BulkDownloadPopup } from './BulkDownloadPopup'
 import { getTemplateById, type ExtendedCertificateTemplate } from '@/lib/certificateTemplates'
+import { useCustomTemplates } from '@/hooks/useCustomTemplates'
 import type { CertificateType, CreateCertificateData, Certificate } from '@/types/certificate'
 
 const certificateSchema = z.object({
@@ -54,6 +55,7 @@ const certificateSchema = z.object({
   hackathon_name: z.string().min(1, 'Hackathon name is required'),
   type: z.enum(['winner', 'participant', 'judge']),
   position: z.string().optional(),
+  maximally_username: z.string().min(1, 'Maximally username is required'),
 })
 
 type CertificateFormData = z.infer<typeof certificateSchema>
@@ -85,6 +87,7 @@ interface CsvData {
   hackathon_name: string
   type: CertificateType
   position?: string
+  maximally_username: string
 }
 
 export function CertificateGenerator() {
@@ -95,12 +98,21 @@ export function CertificateGenerator() {
   const [showTemplateGallery, setShowTemplateGallery] = useState(false)
   const [showBulkDownloadPopup, setShowBulkDownloadPopup] = useState(false)
   const [bulkDownloadData, setBulkDownloadData] = useState<Certificate[] | null>(null)
+  const [showCsvGuide, setShowCsvGuide] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
 
   const createCertificate = useCreateCertificate()
   const createBulkCertificates = useCreateBulkCertificates()
+  
+  // Custom templates
+  const {
+    customTemplates,
+    saveCustomTemplate,
+    deleteCustomTemplate,
+    importTemplate
+  } = useCustomTemplates()
   
   const form = useForm<CertificateFormData>({
     resolver: zodResolver(certificateSchema),
@@ -110,6 +122,7 @@ export function CertificateGenerator() {
       hackathon_name: '',
       type: 'participant',
       position: '',
+      maximally_username: '',
     },
   })
 
@@ -126,6 +139,7 @@ export function CertificateGenerator() {
       hackathon_name: data.hackathon_name,
       type: data.type,
       position: data.position || undefined,
+      maximally_username: data.maximally_username,
       template: selectedTemplate // Pass the selected template
     }
 
@@ -152,6 +166,8 @@ export function CertificateGenerator() {
       hackathon_name: watchedValues.hackathon_name || '',
       type: watchedValues.type || 'participant',
       position: watchedValues.position || undefined,
+      maximally_username: watchedValues.maximally_username || '',
+      template: selectedTemplate || undefined // Include selected template for preview
     }
   }
 
@@ -192,6 +208,11 @@ export function CertificateGenerator() {
                 return
               }
 
+              if (!row.maximally_username?.trim()) {
+                errors.push(`Row ${index + 1}: Missing maximally username`)
+                return
+              }
+
               // Validate email if provided
               if (row.participant_email?.trim()) {
                 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -207,6 +228,7 @@ export function CertificateGenerator() {
                 hackathon_name: row.hackathon_name.trim(),
                 type: row.type.toLowerCase() as CertificateType,
                 position: row.position?.trim() || undefined,
+                maximally_username: row.maximally_username.trim(),
               })
             } catch (error) {
               errors.push(`Row ${index + 1}: Invalid data format`)
@@ -275,6 +297,76 @@ export function CertificateGenerator() {
     navigate('/certificates?tab=list')
   }
 
+  const handleCreateCustomTemplate = () => {
+    // Open a file picker for image files
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = 'image/*'
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0]
+      if (file) {
+        // Convert image to data URL and create a basic template
+        const reader = new FileReader()
+        reader.onload = (e) => {
+          const imageDataUrl = e.target?.result as string
+          
+          // Create a basic template with the uploaded image as background
+          const basicTemplate = {
+            id: `custom_${Date.now()}`,
+            name: `Custom Template ${new Date().toLocaleDateString()}`,
+            description: 'Template created from uploaded image',
+            category: 'custom',
+            canvas: {
+              width: 800,
+              height: 600,
+              backgroundColor: '#ffffff',
+              backgroundImage: imageDataUrl,
+              showGrid: true,
+              snapToGrid: true,
+              gridSize: 20
+            },
+            elements: [
+              {
+                id: `text_${Date.now()}`,
+                type: 'placeholder' as const,
+                content: 'participant_name',
+                position: { x: 100, y: 100 },
+                size: { width: 300, height: 40 },
+                rotation: 0,
+                zIndex: 1,
+                style: {
+                  fontSize: 24,
+                  fontFamily: 'Arial',
+                  fontWeight: 'bold' as const,
+                  color: '#000000',
+                  textAlign: 'center' as const,
+                  backgroundColor: 'transparent',
+                  borderColor: '#cccccc',
+                  borderWidth: 0,
+                  borderRadius: 0,
+                  opacity: 100,
+                  padding: 0
+                }
+              }
+            ],
+            version: '1.0'
+          }
+          
+          // Save the template
+          try {
+            saveCustomTemplate(basicTemplate, watchedValues.type || 'participant')
+            toast.success('Template created from image! Check the Custom Templates section.')
+          } catch (error) {
+            console.error('Failed to save template:', error)
+            toast.error('Failed to save template')
+          }
+        }
+        reader.readAsDataURL(file)
+      }
+    }
+    input.click()
+  }
+
   const downloadSampleCsv = () => {
     const sampleData = [
       {
@@ -282,21 +374,24 @@ export function CertificateGenerator() {
         participant_email: 'john@example.com',
         hackathon_name: 'AI Innovation Challenge 2024',
         type: 'winner',
-        position: '1st Place'
+        position: '1st Place',
+        maximally_username: 'johndoe2024'
       },
       {
         participant_name: 'Jane Smith',
         participant_email: 'jane@example.com',
         hackathon_name: 'AI Innovation Challenge 2024',
         type: 'participant',
-        position: ''
+        position: '',
+        maximally_username: 'janesmith'
       },
       {
         participant_name: 'Bob Johnson',
         participant_email: 'bob@example.com',
         hackathon_name: 'AI Innovation Challenge 2024',
         type: 'judge',
-        position: ''
+        position: '',
+        maximally_username: 'bobjudge'
       }
     ]
 
@@ -478,6 +573,18 @@ export function CertificateGenerator() {
                     )}
                   </div>
 
+                  <div className="space-y-2">
+                    <Label htmlFor="maximally_username">Maximally Username *</Label>
+                    <Input
+                      id="maximally_username"
+                      {...form.register('maximally_username')}
+                      placeholder="Enter maximally username"
+                    />
+                    {form.formState.errors.maximally_username && (
+                      <p className="text-sm text-red-600">{form.formState.errors.maximally_username.message}</p>
+                    )}
+                  </div>
+
                   <div className="space-y-2 md:col-span-2">
                     <Label htmlFor="position">Position/Achievement</Label>
                     <Input
@@ -524,7 +631,19 @@ export function CertificateGenerator() {
               <div className="space-y-4">
                 <div className="flex items-center gap-4">
                   <div className="flex-1">
-                    <Label htmlFor="csv-file">CSV File</Label>
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor="csv-file">CSV File</Label>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowCsvGuide(true)}
+                        className="h-auto p-1 text-gray-500 hover:text-gray-700"
+                        title="Show CSV format guide"
+                      >
+                        <HelpCircle className="h-4 w-4" />
+                      </Button>
+                    </div>
                     <Input
                       ref={fileInputRef}
                       id="csv-file"
@@ -544,16 +663,6 @@ export function CertificateGenerator() {
                   </Button>
                 </div>
 
-                <div className="text-sm text-gray-600 bg-gray-50 p-4 rounded-lg">
-                  <h4 className="font-medium mb-2">CSV Format Requirements:</h4>
-                  <ul className="list-disc list-inside space-y-1">
-                    <li><strong>participant_name</strong> (required): Full name of the participant</li>
-                    <li><strong>participant_email</strong> (optional): Email address</li>
-                    <li><strong>hackathon_name</strong> (required): Name of the hackathon/event</li>
-                    <li><strong>type</strong> (required): Must be "winner", "participant", or "judge"</li>
-                    <li><strong>position</strong> (optional): Achievement or position (e.g., "1st Place")</li>
-                  </ul>
-                </div>
 
                 {csvData.length > 0 && (
                   <div className="space-y-4">
@@ -584,6 +693,7 @@ export function CertificateGenerator() {
                             <th className="text-left p-3 font-medium">Hackathon</th>
                             <th className="text-left p-3 font-medium">Type</th>
                             <th className="text-left p-3 font-medium">Position</th>
+                            <th className="text-left p-3 font-medium">Username</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -594,11 +704,12 @@ export function CertificateGenerator() {
                               <td className="p-3">{cert.hackathon_name}</td>
                               <td className="p-3 capitalize">{cert.type}</td>
                               <td className="p-3">{cert.position || '-'}</td>
+                              <td className="p-3">{cert.maximally_username}</td>
                             </tr>
                           ))}
                           {csvData.length > 10 && (
                             <tr className="border-t">
-                              <td colSpan={5} className="p-3 text-center text-gray-500">
+                              <td colSpan={6} className="p-3 text-center text-gray-500">
                                 ...and {csvData.length - 10} more certificates
                               </td>
                             </tr>
@@ -652,6 +763,9 @@ export function CertificateGenerator() {
         certificateType={watchedValues.type || 'participant'}
         onTemplateSelect={handleTemplateSelect}
         selectedTemplateId={selectedTemplate?.id}
+        customTemplates={customTemplates}
+        onCreateCustomTemplate={handleCreateCustomTemplate}
+        onDeleteCustomTemplate={deleteCustomTemplate}
       />
 
       {/* Bulk Download Popup */}
@@ -663,6 +777,116 @@ export function CertificateGenerator() {
           onNavigateToList={handleNavigateToList}
         />
       )}
+
+      {/* CSV Guide Dialog */}
+      <AlertDialog open={showCsvGuide} onOpenChange={setShowCsvGuide}>
+        <AlertDialogContent className="max-w-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Info className="h-5 w-5" />
+              CSV File Format Guide
+            </AlertDialogTitle>
+            <AlertDialogDescription className="sr-only">
+              Guidelines for formatting CSV files for bulk certificate generation
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          
+          <div className="space-y-4">
+            <div className="text-sm text-gray-600">
+              <p className="mb-4">Your CSV file must contain the following columns in this exact order:</p>
+              
+              <div className="bg-gray-50 p-4 rounded-lg space-y-3">
+                <div className="grid grid-cols-[140px_1fr_80px] gap-2 font-medium text-gray-800 border-b pb-2">
+                  <div>Column Name</div>
+                  <div>Description</div>
+                  <div>Required</div>
+                </div>
+                
+                <div className="grid grid-cols-[140px_1fr_80px] gap-2">
+                  <div className="font-mono text-blue-600">participant_name</div>
+                  <div>Full name of the participant</div>
+                  <div className="text-red-600 font-medium">Yes</div>
+                </div>
+                
+                <div className="grid grid-cols-[140px_1fr_80px] gap-2">
+                  <div className="font-mono text-blue-600">participant_email</div>
+                  <div>Email address of the participant</div>
+                  <div className="text-gray-500">No</div>
+                </div>
+                
+                <div className="grid grid-cols-[140px_1fr_80px] gap-2">
+                  <div className="font-mono text-blue-600">hackathon_name</div>
+                  <div>Name of the hackathon or event</div>
+                  <div className="text-red-600 font-medium">Yes</div>
+                </div>
+                
+                <div className="grid grid-cols-[140px_1fr_80px] gap-2">
+                  <div className="font-mono text-blue-600">type</div>
+                  <div>Certificate type: "winner", "participant", or "judge"</div>
+                  <div className="text-red-600 font-medium">Yes</div>
+                </div>
+                
+                <div className="grid grid-cols-[140px_1fr_80px] gap-2">
+                  <div className="font-mono text-blue-600">position</div>
+                  <div>Achievement or position (e.g., "1st Place", "Best Innovation")</div>
+                  <div className="text-gray-500">No</div>
+                </div>
+                
+                <div className="grid grid-cols-[140px_1fr_80px] gap-2">
+                  <div className="font-mono text-blue-600">maximally_username</div>
+                  <div>User's Maximally platform username</div>
+                  <div className="text-red-600 font-medium">Yes</div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-blue-50 border-l-4 border-blue-400 p-4">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <Info className="h-5 w-5 text-blue-400" />
+                </div>
+                <div className="ml-3">
+                  <h3 className="text-sm font-medium text-blue-800">Important Notes</h3>
+                  <div className="mt-2 text-sm text-blue-700">
+                    <ul className="list-disc list-inside space-y-1">
+                      <li>The first row must contain column headers (exactly as shown above)</li>
+                      <li>Certificate type must be exactly "winner", "participant", or "judge" (case-insensitive)</li>
+                      <li>Email addresses must be valid if provided</li>
+                      <li>Empty cells are allowed for optional fields</li>
+                      <li>Download the sample CSV to see the correct format</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-green-50 border-l-4 border-green-400 p-4">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <FileText className="h-5 w-5 text-green-400" />
+                </div>
+                <div className="ml-3">
+                  <h3 className="text-sm font-medium text-green-800">Sample CSV Content</h3>
+                  <div className="mt-2 text-sm text-green-700">
+                    <pre className="bg-white p-2 rounded border text-xs overflow-x-auto">
+{`participant_name,participant_email,hackathon_name,type,position,maximally_username
+John Doe,john@example.com,AI Challenge 2024,winner,1st Place,johndoe2024
+Jane Smith,jane@example.com,AI Challenge 2024,participant,,janesmith
+Bob Johnson,bob@example.com,AI Challenge 2024,judge,,bobjudge`}
+                    </pre>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setShowCsvGuide(false)}>
+              Got it!
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

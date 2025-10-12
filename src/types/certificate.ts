@@ -14,6 +14,7 @@ export interface Certificate {
   status: CertificateStatus
   generated_by: string
   admin_email?: string
+  maximally_username: string
   created_at: string
   updated_at: string
 }
@@ -24,6 +25,7 @@ export interface CreateCertificateData {
   hackathon_name: string
   type: CertificateType
   position?: string
+  maximally_username: string
   template?: CertificateTemplate // Optional template for custom designs
 }
 

@@ -301,5 +301,35 @@ export const TEMPLATE_CATEGORIES = {
     name: 'Creative',
     description: 'Unique and innovative certificate designs',
     icon: '🌟'
+  },
+  academic: {
+    name: 'Academic',
+    description: 'Templates for academic achievements and courses',
+    icon: '🎓'
+  },
+  corporate: {
+    name: 'Corporate',
+    description: 'Professional templates for corporate events',
+    icon: '🏢'
+  },
+  competition: {
+    name: 'Competition',
+    description: 'Templates for hackathons and competitions',
+    icon: '🏆'
+  },
+  awards: {
+    name: 'Awards',
+    description: 'Templates for awards and recognitions',
+    icon: '🏅'
+  },
+  workshop: {
+    name: 'Workshop',
+    description: 'Templates for workshops and training sessions',
+    icon: '🛠️'
+  },
+  custom: {
+    name: 'Custom',
+    description: 'User-created custom templates',
+    icon: '⚙️'
   }
 }
