@@ -155,3 +155,5 @@ cypress/screenshots/
 # package-lock.json
 # yarn.lock
 # pnpm-lock.yaml
+
+create_envs_adminpanel.bat
