@@ -97,12 +97,16 @@ export async function createCertificate(data: CreateCertificateData): Promise<Ce
 export async function createBulkCertificates(
   certificates: CreateCertificateData[]
 ): Promise<Certificate[]> {
+  // Generate a unique batch ID for this bulk operation
+  const batchId = `batch_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+  
   const results: Certificate[] = []
   const errors: string[] = []
 
   for (const certData of certificates) {
     try {
-      const certificate = await createCertificate(certData)
+      // Add batch ID to certificate data
+      const certificate = await createCertificateWithBatch({ ...certData, batch_id: batchId })
       results.push(certificate)
     } catch (error) {
       console.error(`Failed to create certificate for ${certData.participant_name}:`, error)
@@ -115,6 +119,82 @@ export async function createBulkCertificates(
   }
 
   return results
+}
+
+/**
+ * Create a single certificate with batch ID (internal function)
+ */
+export async function createCertificateWithBatch(data: CreateCertificateData & { batch_id?: string }): Promise<Certificate> {
+  // Get current user
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    throw new Error('User not authenticated')
+  }
+  
+  // Get user profile to fetch email
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('email')
+    .eq('id', user.id)
+    .single()
+    
+  if (profileError) {
+    console.warn('Failed to fetch user profile:', profileError)
+  }
+
+  // Generate unique certificate ID
+  const certificateId = generateCertificateId()
+  
+  // Use custom template if provided, otherwise fall back to default template for certificate type
+  let template: CertificateTemplate
+  if (data.template) {
+    // Convert extended template (including custom templates) to basic template format
+    template = convertToCertificateTemplate(data.template as ExtendedCertificateTemplate | CustomTemplate)
+  } else {
+    template = CERTIFICATE_TEMPLATES[data.type]
+  }
+  
+  // Generate certificate files
+  const { pdfBlob, jpgBlob } = await generateCertificateFiles({
+    data,
+    template: data.template || template, // Pass original template for custom template detection
+    certificateId
+  })
+  
+  // Upload files to storage
+  const { pdfUrl, jpgUrl } = await uploadCertificateFiles(
+    certificateId,
+    pdfBlob,
+    jpgBlob
+  )
+
+  // Save certificate record to database
+  const { data: certificate, error } = await supabase
+    .from('certificates')
+    .insert({
+      certificate_id: certificateId,
+      participant_name: data.participant_name,
+      participant_email: data.participant_email,
+      hackathon_name: data.hackathon_name,
+      type: data.type,
+      position: data.position,
+      pdf_url: pdfUrl,
+      jpg_url: jpgUrl,
+      status: 'active',
+      generated_by: user.id,
+      admin_email: profile?.email || user.email,
+      maximally_username: data.maximally_username,
+      template_id: (data.template && 'id' in data.template && !('isCustom' in data.template)) ? data.template.id : null,
+      batch_id: data.batch_id // Add batch ID for bulk generation tracking
+    })
+    .select()
+    .single()
+
+  if (error) {
+    throw new Error(`Failed to create certificate: ${error.message}`)
+  }
+
+  return certificate
 }
 
 /**
@@ -226,24 +306,81 @@ export async function deleteCertificate(id: string): Promise<void> {
   }
 
   // Delete files from storage
-  const filesToDelete = []
+  const filesToDelete: string[] = []
+  
+  // Extract file paths from full URLs
   if (certificate.pdf_url) {
-    const pdfPath = certificate.pdf_url.split('/').pop()
-    if (pdfPath) filesToDelete.push(pdfPath)
+    try {
+      // Handle both full URLs and direct paths
+      let pdfPath = certificate.pdf_url
+      if (pdfPath.includes('supabase.co')) {
+        // Extract the file path from the full Supabase URL
+        // URL format: https://[project].supabase.co/storage/v1/object/public/certificates/[filename]
+        const urlParts = pdfPath.split('/storage/v1/object/')
+        if (urlParts.length > 1) {
+          const pathPart = urlParts[1]
+          if (pathPart.startsWith('public/certificates/')) {
+            pdfPath = pathPart.replace('public/certificates/', '')
+          } else if (pathPart.startsWith('sign/certificates/')) {
+            pdfPath = pathPart.replace('sign/certificates/', '').split('?')[0] // Remove query params
+          }
+        }
+      } else {
+        // If it's just a filename, use it as is
+        pdfPath = pdfPath.split('/').pop() || pdfPath
+      }
+      if (pdfPath && pdfPath !== certificate.pdf_url) {
+        filesToDelete.push(pdfPath)
+      }
+    } catch (error) {
+      console.warn('Failed to parse PDF URL for deletion:', error)
+    }
   }
+  
   if (certificate.jpg_url) {
-    const jpgPath = certificate.jpg_url.split('/').pop()
-    if (jpgPath) filesToDelete.push(jpgPath)
+    try {
+      // Handle both full URLs and direct paths
+      let jpgPath = certificate.jpg_url
+      if (jpgPath.includes('supabase.co')) {
+        // Extract the file path from the full Supabase URL
+        const urlParts = jpgPath.split('/storage/v1/object/')
+        if (urlParts.length > 1) {
+          const pathPart = urlParts[1]
+          if (pathPart.startsWith('public/certificates/')) {
+            jpgPath = pathPart.replace('public/certificates/', '')
+          } else if (pathPart.startsWith('sign/certificates/')) {
+            jpgPath = pathPart.replace('sign/certificates/', '').split('?')[0] // Remove query params
+          }
+        }
+      } else {
+        // If it's just a filename, use it as is
+        jpgPath = jpgPath.split('/').pop() || jpgPath
+      }
+      if (jpgPath && jpgPath !== certificate.jpg_url) {
+        filesToDelete.push(jpgPath)
+      }
+    } catch (error) {
+      console.warn('Failed to parse JPG URL for deletion:', error)
+    }
   }
 
+  // Delete files from storage if any were found
   if (filesToDelete.length > 0) {
-    const { error: storageError } = await supabase.storage
+    console.log('Attempting to delete files from storage:', filesToDelete)
+    
+    const { data: deletedFiles, error: storageError } = await supabase.storage
       .from('certificates')
       .remove(filesToDelete)
 
     if (storageError) {
-      console.warn('Failed to delete some files from storage:', storageError.message)
+      console.error('Failed to delete files from storage:', storageError)
+      // Don't throw error here - we still want to delete the database record
+      console.warn('Continuing with database deletion despite storage error')
+    } else {
+      console.log('Successfully deleted files from storage:', deletedFiles)
     }
+  } else {
+    console.log('No files to delete from storage for certificate:', certificate.certificate_id)
   }
 
   // Delete certificate record

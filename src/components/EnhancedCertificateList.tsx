@@ -70,7 +70,8 @@ import {
   SortDesc,
   TrendingUp,
   Activity,
-  QrCode
+  QrCode,
+  Check
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { 
@@ -83,6 +84,7 @@ import {
 import { createCertificateZip, downloadBlob } from '@/lib/certificateUtils'
 import { getVerificationUrl } from '@/config/constants'
 import type { Certificate, CertificateFilters, CertificateStatus, CertificateType } from '@/types/certificate'
+import ErrorBoundary from './ErrorBoundary'
 
 const certificateTypeConfig = {
   winner: { label: 'Winner', icon: Award, color: 'bg-yellow-100 text-yellow-800 border-yellow-200' },
@@ -182,6 +184,23 @@ export function EnhancedCertificateList() {
         ? prev.filter(id => id !== certificateId)
         : [...prev, certificateId]
     )
+  }
+
+  // Batch selection
+  const handleBatchSelect = (batchId: string) => {
+    const batchCertificates = certificates.filter(cert => cert.batch_id === batchId)
+    const batchCertIds = batchCertificates.map(cert => cert.id)
+    const allSelected = batchCertIds.every(id => selectedCertificates.includes(id))
+    
+    if (allSelected) {
+      // Deselect all certificates from this batch
+      setSelectedCertificates(prev => prev.filter(id => !batchCertIds.includes(id)))
+      toast.info(`Deselected ${batchCertificates.length} certificates from batch`)
+    } else {
+      // Select all certificates from this batch
+      setSelectedCertificates(prev => [...new Set([...prev, ...batchCertIds])])
+      toast.success(`Selected ${batchCertificates.length} certificates from batch`)
+    }
   }
 
   // Status update
@@ -289,13 +308,62 @@ export function EnhancedCertificateList() {
     }
   }
 
+  // Bulk delete
+  const handleBulkDelete = async () => {
+    if (selectedCertificates.length === 0) {
+      toast.error('Please select certificates to delete')
+      return
+    }
+
+    const selectedCerts = certificates.filter(cert => selectedCertificates.includes(cert.id))
+    const confirmMessage = `Are you sure you want to delete ${selectedCerts.length} certificates?\n\nThis will permanently delete:\n${selectedCerts.slice(0, 5).map(c => `- ${c.participant_name} (${c.certificate_id})`).join('\n')}${selectedCerts.length > 5 ? `\n...and ${selectedCerts.length - 5} more certificates` : ''}\n\nThis action cannot be undone and will also delete the certificate files from storage.`
+    
+    if (!window.confirm(confirmMessage)) {
+      return
+    }
+
+    const toastId = toast.loading(`Deleting ${selectedCerts.length} certificates...`)
+    let deletedCount = 0
+    const errors: string[] = []
+
+    try {
+      // Delete certificates one by one to ensure proper storage cleanup
+      for (const cert of selectedCerts) {
+        try {
+          await deleteCertificate.mutateAsync(cert.id)
+          deletedCount++
+          toast.loading(`Deleted ${deletedCount}/${selectedCerts.length} certificates...`, { id: toastId })
+        } catch (error) {
+          console.error(`Failed to delete certificate ${cert.certificate_id}:`, error)
+          errors.push(`${cert.participant_name} (${cert.certificate_id})`)
+        }
+      }
+
+      // Clear selection
+      setSelectedCertificates([])
+
+      // Show final result
+      if (errors.length === 0) {
+        toast.success(`Successfully deleted all ${deletedCount} certificates`, { id: toastId })
+      } else if (deletedCount > 0) {
+        toast.warning(`Deleted ${deletedCount} certificates, but ${errors.length} failed:\n${errors.slice(0, 3).join('\n')}${errors.length > 3 ? `\n...and ${errors.length - 3} more` : ''}`, { id: toastId })
+      } else {
+        toast.error(`Failed to delete certificates. Please try again.`, { id: toastId })
+      }
+    } catch (error) {
+      console.error('Bulk delete error:', error)
+      toast.error('Failed to delete certificates', { id: toastId })
+    }
+  }
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
       month: 'short',
       day: 'numeric',
+      year: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
+      hour12: true
     })
   }
 
@@ -308,6 +376,28 @@ export function EnhancedCertificateList() {
     if (diffInHours < 24) return `${diffInHours}h ago`
     if (diffInHours < 48) return 'Yesterday'
     return `${Math.floor(diffInHours / 24)}d ago`
+  }
+
+  // Generate consistent colors for batch IDs
+  const getBatchColor = (batchId: string | undefined): string => {
+    if (!batchId) return 'bg-gray-400' // Single certificate (no batch)
+    
+    // Create a simple hash of the batch ID to generate consistent colors
+    let hash = 0
+    for (let i = 0; i < batchId.length; i++) {
+      const char = batchId.charCodeAt(i)
+      hash = ((hash << 5) - hash) + char
+      hash = hash & hash // Convert to 32bit integer
+    }
+    
+    // Use predefined color palette for batches
+    const colors = [
+      'bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-pink-500', 
+      'bg-indigo-500', 'bg-cyan-500', 'bg-emerald-500', 'bg-violet-500',
+      'bg-rose-500', 'bg-amber-500', 'bg-orange-500', 'bg-teal-500'
+    ]
+    
+    return colors[Math.abs(hash) % colors.length]
   }
 
   if (isLoading) {
@@ -365,10 +455,58 @@ export function EnhancedCertificateList() {
                     <Archive className="h-4 w-4 mr-2" />
                     {bulkDownloadLoading ? 'Creating ZIP...' : 'Download ZIP'}
                   </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleBulkDelete} className="text-red-600 focus:text-red-600 focus:bg-red-50">
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete Selected ({selectedCertificates.length})
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </>
           )}
+          
+          {/* Batch Selection Button - Show when there are certificates with batch IDs */}
+          {certificates.some(cert => cert.batch_id) && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="flex items-center gap-2">
+                  <Users className="h-4 w-4" />
+                  Select by Batch
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>Batch Selection</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {[...new Set(certificates.filter(c => c.batch_id).map(c => c.batch_id))]
+                  .slice(0, 10) // Limit to recent 10 batches
+                  .map(batchId => {
+                    const batchCerts = certificates.filter(c => c.batch_id === batchId)
+                    const isSelected = batchCerts.every(cert => selectedCertificates.includes(cert.id))
+                    return (
+                      <DropdownMenuItem 
+                        key={batchId}
+                        onClick={() => handleBatchSelect(batchId!)}
+                        className="flex items-center gap-2"
+                      >
+                        <div 
+                          className={`w-2 h-2 rounded-full ${getBatchColor(batchId)}`}
+                        />
+                        <div className="flex-1">
+                          <div className="font-mono text-xs">{batchId}</div>
+                          <div className="text-xs text-gray-500">{batchCerts.length} certificates</div>
+                        </div>
+                        {isSelected && <Check className="h-3 w-3" />}
+                      </DropdownMenuItem>
+                    )
+                  })}
+                {certificates.filter(c => c.batch_id).length === 0 && (
+                  <DropdownMenuItem disabled>
+                    No batches found
+                  </DropdownMenuItem>
+                )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           
           <Button
             variant="outline"
@@ -388,7 +526,7 @@ export function EnhancedCertificateList() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="text-2xl font-bold text-blue-600">{stats.total}</div>
+                  <div className="text-2xl font-bold text-blue-600">{stats.total || 0}</div>
                   <div className="text-sm text-gray-600">Total</div>
                 </div>
                 <Activity className="h-8 w-8 text-blue-400" />
@@ -399,7 +537,7 @@ export function EnhancedCertificateList() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="text-2xl font-bold text-green-600">{stats.active}</div>
+                  <div className="text-2xl font-bold text-green-600">{stats.active || 0}</div>
                   <div className="text-sm text-gray-600">Active</div>
                 </div>
                 <TrendingUp className="h-8 w-8 text-green-400" />
@@ -408,25 +546,25 @@ export function EnhancedCertificateList() {
           </Card>
           <Card className="border-red-200">
             <CardContent className="p-4">
-              <div className="text-2xl font-bold text-red-600">{stats.inactive}</div>
+              <div className="text-2xl font-bold text-red-600">{stats.inactive || 0}</div>
               <div className="text-sm text-gray-600">Inactive</div>
             </CardContent>
           </Card>
           <Card className="border-yellow-200">
             <CardContent className="p-4">
-              <div className="text-2xl font-bold text-yellow-600">{stats.byType.winner || 0}</div>
+              <div className="text-2xl font-bold text-yellow-600">{stats.byType?.winner || 0}</div>
               <div className="text-sm text-gray-600">Winners</div>
             </CardContent>
           </Card>
           <Card className="border-blue-200">
             <CardContent className="p-4">
-              <div className="text-2xl font-bold text-blue-600">{stats.byType.participant || 0}</div>
+              <div className="text-2xl font-bold text-blue-600">{stats.byType?.participant || 0}</div>
               <div className="text-sm text-gray-600">Participants</div>
             </CardContent>
           </Card>
           <Card className="border-green-200">
             <CardContent className="p-4">
-              <div className="text-2xl font-bold text-green-600">{stats.byType.judge || 0}</div>
+              <div className="text-2xl font-bold text-green-600">{stats.byType?.judge || 0}</div>
               <div className="text-sm text-gray-600">Judges</div>
             </CardContent>
           </Card>
@@ -435,7 +573,8 @@ export function EnhancedCertificateList() {
 
       {/* Enhanced Filters */}
       {showFilters && (
-        <Card>
+        <ErrorBoundary>
+          <Card>
           <CardHeader>
             <CardTitle className="text-lg">Advanced Filters</CardTitle>
           </CardHeader>
@@ -457,14 +596,14 @@ export function EnhancedCertificateList() {
               <div className="space-y-2">
                 <Label>Certificate Type</Label>
                 <Select
-                  value={filters.type || ''}
-                  onValueChange={(value) => handleFilterChange('type', value)}
+                  value={filters.type || 'all'}
+                  onValueChange={(value) => handleFilterChange('type', value === 'all' ? '' : value)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="All types" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All types</SelectItem>
+                    <SelectItem value="all">All types</SelectItem>
                     <SelectItem value="winner">Winners</SelectItem>
                     <SelectItem value="participant">Participants</SelectItem>
                     <SelectItem value="judge">Judges</SelectItem>
@@ -475,14 +614,14 @@ export function EnhancedCertificateList() {
               <div className="space-y-2">
                 <Label>Status</Label>
                 <Select
-                  value={filters.status || ''}
-                  onValueChange={(value) => handleFilterChange('status', value)}
+                  value={filters.status || 'all'}
+                  onValueChange={(value) => handleFilterChange('status', value === 'all' ? '' : value)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="All statuses" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All statuses</SelectItem>
+                    <SelectItem value="all">All statuses</SelectItem>
                     <SelectItem value="active">Active</SelectItem>
                     <SelectItem value="inactive">Inactive</SelectItem>
                   </SelectContent>
@@ -492,19 +631,23 @@ export function EnhancedCertificateList() {
               <div className="space-y-2">
                 <Label>Hackathon</Label>
                 <Select
-                  value={filters.hackathon_name || ''}
-                  onValueChange={(value) => handleFilterChange('hackathon_name', value)}
+                  value={filters.hackathon_name || 'all'}
+                  onValueChange={(value) => handleFilterChange('hackathon_name', value === 'all' ? '' : value)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="All hackathons" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All hackathons</SelectItem>
-                    {hackathonNames.map((name) => (
+                    <SelectItem value="all">All hackathons</SelectItem>
+                    {hackathonNames && hackathonNames.length > 0 ? hackathonNames.map((name) => (
                       <SelectItem key={name} value={name}>
                         {name}
                       </SelectItem>
-                    ))}
+                    )) : (
+                      <SelectItem value="no-hackathons" disabled>
+                        No hackathons found
+                      </SelectItem>
+                    )}
                   </SelectContent>
                 </Select>
               </div>
@@ -534,12 +677,13 @@ export function EnhancedCertificateList() {
               </div>
             )}
           </CardContent>
-        </Card>
+          </Card>
+        </ErrorBoundary>
       )}
 
       {/* Enhanced Certificates Table */}
       <Card>
-        <CardContent className="p-0">
+        <CardContent className="p-0 overflow-hidden">
           {sortedCertificates.length === 0 ? (
             <div className="text-center py-12">
               <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
@@ -552,32 +696,46 @@ export function EnhancedCertificateList() {
               </div>
             </div>
           ) : (
-            <Table>
+            <div className="w-full" style={{ overflowX: 'auto', overflowY: 'visible' }}>
+              <div style={{ transform: 'scale(0.9)', transformOrigin: 'top left', width: '111.11%' }}>
+                <Table className="text-xs" style={{ minWidth: '1000px', width: '100%' }}>
+              <colgroup>
+                <col className="w-12" />
+                <col className="w-40" />
+                <col className="w-44" />
+                <col className="w-24" />
+                <col className="w-44" />
+                <col className="w-24" />
+                <col className="w-20" />
+                <col className="w-36" />
+                <col className="w-32" />
+                <col className="w-32" />
+              </colgroup>
               <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[50px]">
+                <TableRow className="h-8">
+                  <TableHead className="w-12 p-2">
                     <button
                       onClick={toggleSelectAll}
                       className="flex items-center justify-center w-full"
                     >
                       {isAllSelected ? (
-                        <CheckSquare className="h-4 w-4" />
+                        <CheckSquare className="h-3 w-3" />
                       ) : isIndeterminate ? (
-                        <CheckSquare className="h-4 w-4 opacity-50" />
+                        <CheckSquare className="h-3 w-3 opacity-50" />
                       ) : (
-                        <Square className="h-4 w-4" />
+                        <Square className="h-3 w-3" />
                       )}
                     </button>
                   </TableHead>
-                  <TableHead>Certificate ID</TableHead>
-                  <TableHead>Participant</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Hackathon</TableHead>
-                  <TableHead>Position</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Created By</TableHead>
-                  <TableHead>Created</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead className="text-xs font-medium p-2">Certificate ID</TableHead>
+                  <TableHead className="text-xs font-medium p-2">Participant</TableHead>
+                  <TableHead className="text-xs font-medium p-2">Type</TableHead>
+                  <TableHead className="text-xs font-medium p-2">Hackathon</TableHead>
+                  <TableHead className="text-xs font-medium p-2">Position</TableHead>
+                  <TableHead className="text-xs font-medium p-2">Status</TableHead>
+                  <TableHead className="text-xs font-medium p-2">Created By</TableHead>
+                  <TableHead className="text-xs font-medium p-2">Created</TableHead>
+                  <TableHead className="text-xs font-medium p-2 text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -587,114 +745,119 @@ export function EnhancedCertificateList() {
                   const TypeIcon = typeConfig.icon
 
                   return (
-                    <TableRow key={certificate.id} className={isSelected ? 'bg-blue-50' : ''}>
-                      <TableCell>
+                    <TableRow key={certificate.id} className={`h-10 ${isSelected ? 'bg-blue-50' : ''}`}>
+                      <TableCell className="p-2">
                         <button
                           onClick={() => toggleSelectCertificate(certificate.id)}
                           className="flex items-center justify-center"
                         >
                           {isSelected ? (
-                            <CheckSquare className="h-4 w-4 text-blue-600" />
+                            <CheckSquare className="h-3 w-3 text-blue-600" />
                           ) : (
-                            <Square className="h-4 w-4" />
+                            <Square className="h-3 w-3" />
                           )}
                         </button>
                       </TableCell>
-                      <TableCell className="font-mono text-sm">
-                        <div className="flex items-center gap-2">
-                          <span>{certificate.certificate_id}</span>
+                      <TableCell className="font-mono text-xs whitespace-nowrap p-2">
+                        <div className="flex items-center gap-1">
+                          <div className="flex items-center gap-1">
+                            <div 
+                              className={`w-1.5 h-1.5 rounded-full ${getBatchColor(certificate.batch_id)}`}
+                              title={certificate.batch_id ? `Batch: ${certificate.batch_id}` : 'Single certificate'}
+                            />
+                            <span className="font-medium text-xs">{certificate.certificate_id}</span>
+                          </div>
                           <button
                             type="button"
-                            className="h-6 w-6 p-0 rounded hover:bg-gray-100 flex items-center justify-center transition-colors"
+                            className="h-4 w-4 p-0 rounded hover:bg-gray-100 flex items-center justify-center transition-colors"
                             onClick={() => copyVerificationUrl(certificate.certificate_id)}
                             title="Copy verification URL"
                           >
-                            <Copy className="h-3 w-3" />
+                            <Copy className="h-2.5 w-2.5" />
                           </button>
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="whitespace-nowrap p-2">
                         <div>
-                          <div className="font-medium">{certificate.participant_name}</div>
+                          <div className="font-medium text-xs text-gray-900">{certificate.participant_name}</div>
                           {certificate.participant_email && (
-                            <div className="text-sm text-gray-500">{certificate.participant_email}</div>
+                            <div className="text-xs text-gray-500">{certificate.participant_email}</div>
                           )}
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <Badge className={`${typeConfig.color} flex items-center gap-1 w-fit border`}>
-                          <TypeIcon className="h-3 w-3" />
+                      <TableCell className="p-2">
+                        <Badge className={`${typeConfig.color} flex items-center gap-1 w-fit border text-xs`}>
+                          <TypeIcon className="h-2.5 w-2.5" />
                           {typeConfig.label}
                         </Badge>
                       </TableCell>
-                      <TableCell className="max-w-[200px]">
-                        <div className="truncate" title={certificate.hackathon_name}>
+                      <TableCell className="whitespace-nowrap p-2">
+                        <div className="font-medium text-xs text-gray-900">
                           {certificate.hackathon_name}
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="p-2">
                         {certificate.position ? (
-                          <Badge variant="outline" className="border-purple-200 text-purple-700">
+                          <Badge variant="outline" className="border-purple-200 text-purple-700 text-xs">
                             {certificate.position}
                           </Badge>
                         ) : (
-                          <span className="text-gray-400">-</span>
+                          <span className="text-gray-400 text-xs">-</span>
                         )}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="p-2">
                         <button
                           onClick={() => handleStatusToggle(certificate)}
                           disabled={updateStatus.isPending}
-                          className="flex items-center gap-2 hover:bg-gray-100 p-1 rounded transition-colors"
+                          className="flex items-center gap-1 hover:bg-gray-100 p-1 rounded transition-colors"
                         >
                           {certificate.status === 'active' ? (
                             <>
-                              <ToggleRight className="h-5 w-5 text-green-600" />
-                              <span className="text-green-600 font-medium">Active</span>
+                              <ToggleRight className="h-3 w-3 text-green-600" />
+                              <span className="text-green-600 font-medium text-xs">Active</span>
                             </>
                           ) : (
                             <>
-                              <ToggleLeft className="h-5 w-5 text-gray-400" />
-                              <span className="text-gray-400">Inactive</span>
+                              <ToggleLeft className="h-3 w-3 text-gray-400" />
+                              <span className="text-gray-400 text-xs">Inactive</span>
                             </>
                           )}
                         </button>
                       </TableCell>
-                      <TableCell className="text-sm">
-                        <div className="flex items-center gap-2">
-                          <User className="h-4 w-4 text-gray-400" />
-                          <div className="max-w-[150px]">
+                      <TableCell className="text-xs p-2">
+                        <div className="flex items-center gap-1">
+                          <User className="h-3 w-3 text-gray-400" />
+                          <div className="whitespace-nowrap">
                             {certificate.admin_email ? (
-                              <div>
-                                <div className="font-medium text-gray-900 truncate" title={certificate.admin_email}>
-                                  {certificate.admin_email.split('@')[0]}
-                                </div>
-                                <div className="text-xs text-gray-500 truncate">
-                                  @{certificate.admin_email.split('@')[1]}
-                                </div>
+                              <div className="font-medium text-gray-900 text-xs">
+                                {certificate.admin_email}
                               </div>
                             ) : (
-                              <span className="text-gray-400 text-sm">Unknown Admin</span>
+                              <span className="text-gray-400 text-xs">Unknown Admin</span>
                             )}
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell className="text-sm text-gray-500">
-                        <div className="flex flex-col gap-1">
-                          <div className="flex items-center gap-1">
-                            <Calendar className="h-3 w-3" />
-                            {formatDate(certificate.created_at)}
-                          </div>
-                          <span className="text-xs text-gray-400">
-                            {getRelativeTime(certificate.created_at)}
+                      <TableCell className="text-xs text-gray-500 whitespace-nowrap p-2">
+                        <div className="flex items-center gap-1">
+                          <Calendar className="h-2.5 w-2.5" />
+                          <span className="text-xs">
+                            {new Date(certificate.created_at).toLocaleDateString('en-US', {
+                              month: 'short',
+                              day: 'numeric',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                              hour12: true
+                            })}
                           </span>
                         </div>
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-right p-2">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                              <MoreHorizontal className="h-4 w-4" />
+                            <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                              <MoreHorizontal className="h-3 w-3" />
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
@@ -793,7 +956,9 @@ export function EnhancedCertificateList() {
                   )
                 })}
               </TableBody>
-            </Table>
+                </Table>
+              </div>
+            </div>
           )}
         </CardContent>
       </Card>

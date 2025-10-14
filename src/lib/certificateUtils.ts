@@ -229,16 +229,31 @@ export async function createCustomCertificateHTML(options: CertificateGeneration
   
   const elementsHTML = templateConfig.elements.map(renderElement).join('')
   
-  return `
-    <div style="
+  // If there's a background image, we want to ensure the certificate matches the image dimensions
+  const certificateStyle = templateConfig.canvas.backgroundImage 
+    ? `
       position: relative;
       width: ${templateConfig.canvas.width}px;
       height: ${templateConfig.canvas.height}px;
       background: ${templateConfig.canvas.backgroundColor};
-      ${templateConfig.canvas.backgroundImage ? `background-image: url(${templateConfig.canvas.backgroundImage}); background-size: cover; background-position: center;` : ''}
+      background-image: url(${templateConfig.canvas.backgroundImage});
+      background-size: 100% 100%;
+      background-repeat: no-repeat;
+      background-position: center;
       font-family: Arial, sans-serif;
       overflow: hidden;
-    ">
+    `
+    : `
+      position: relative;
+      width: ${templateConfig.canvas.width}px;
+      height: ${templateConfig.canvas.height}px;
+      background: ${templateConfig.canvas.backgroundColor};
+      font-family: Arial, sans-serif;
+      overflow: hidden;
+    `
+
+  return `
+    <div style="${certificateStyle}">
       ${elementsHTML}
     </div>
   `
@@ -522,10 +537,23 @@ export async function generateCertificateFiles(options: CertificateGenerationOpt
   document.body.appendChild(container)
 
   try {
+    // Determine canvas dimensions based on template type
+    let canvasWidth = CERTIFICATE_CONFIG.CANVAS_SETTINGS.width
+    let canvasHeight = CERTIFICATE_CONFIG.CANVAS_SETTINGS.height
+    
+    // Use custom template dimensions if available
+    if (options.template && 'isCustom' in options.template && options.template.isCustom) {
+      const customTemplate = options.template as CustomTemplate
+      if (customTemplate.templateConfig) {
+        canvasWidth = customTemplate.templateConfig.canvas.width
+        canvasHeight = customTemplate.templateConfig.canvas.height
+      }
+    }
+    
     // Generate canvas from HTML
     const canvas = await html2canvas(container.firstElementChild as HTMLElement, {
-      width: CERTIFICATE_CONFIG.CANVAS_SETTINGS.width,
-      height: CERTIFICATE_CONFIG.CANVAS_SETTINGS.height,
+      width: canvasWidth,
+      height: canvasHeight,
       scale: CERTIFICATE_CONFIG.CANVAS_SETTINGS.scale,
       backgroundColor: null,
       logging: false,
@@ -539,15 +567,43 @@ export async function generateCertificateFiles(options: CertificateGenerationOpt
       }, 'image/jpeg', 0.95)
     })
 
-    // Generate PDF
+    // Generate PDF with appropriate dimensions
+    let pdfOrientation: 'portrait' | 'landscape' = CERTIFICATE_CONFIG.PDF_SETTINGS.orientation
+    let pdfFormat = CERTIFICATE_CONFIG.PDF_SETTINGS.format
+    
+    // Determine orientation based on canvas aspect ratio
+    if (canvasWidth > canvasHeight) {
+      pdfOrientation = 'landscape'
+    } else {
+      pdfOrientation = 'portrait'
+    }
+    
     const pdf = new jsPDF({
-      orientation: CERTIFICATE_CONFIG.PDF_SETTINGS.orientation,
+      orientation: pdfOrientation,
       unit: CERTIFICATE_CONFIG.PDF_SETTINGS.unit,
-      format: CERTIFICATE_CONFIG.PDF_SETTINGS.format
+      format: pdfFormat
     })
+    
+    // Calculate PDF dimensions to fit the canvas while maintaining aspect ratio
+    const pdfPageWidth = pdf.internal.pageSize.getWidth()
+    const pdfPageHeight = pdf.internal.pageSize.getHeight()
+    const aspectRatio = canvasWidth / canvasHeight
+    
+    let imgWidth = pdfPageWidth - 20 // 10px margin on each side
+    let imgHeight = imgWidth / aspectRatio
+    
+    // If height is too large, scale based on height instead
+    if (imgHeight > pdfPageHeight - 20) {
+      imgHeight = pdfPageHeight - 20
+      imgWidth = imgHeight * aspectRatio
+    }
+    
+    // Center the image
+    const xOffset = (pdfPageWidth - imgWidth) / 2
+    const yOffset = (pdfPageHeight - imgHeight) / 2
 
     const imgData = canvas.toDataURL('image/jpeg', 0.95)
-    pdf.addImage(imgData, 'JPEG', 10, 10, 277, 190)
+    pdf.addImage(imgData, 'JPEG', xOffset, yOffset, imgWidth, imgHeight)
 
     const pdfBlob = new Blob([pdf.output('arraybuffer')], {
       type: 'application/pdf'
@@ -628,32 +684,113 @@ export async function createCertificateZip(certificates: Array<{
   jpg_url?: string
 }>): Promise<Blob> {
   const zip = new JSZip()
+  let successCount = 0
+  let errorCount = 0
+  const errors: string[] = []
+  
+  console.log(`Creating ZIP for ${certificates.length} certificates`)
 
   for (const cert of certificates) {
+    let certSuccessCount = 0
+    let certErrors: string[] = []
+    
     try {
       // Download PDF if available
       if (cert.pdf_url) {
-        const pdfResponse = await fetch(cert.pdf_url)
-        if (pdfResponse.ok) {
-          const pdfBlob = await pdfResponse.blob()
-          zip.file(`${cert.certificate_id}_${cert.participant_name.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`, pdfBlob)
+        console.log(`Downloading PDF for ${cert.certificate_id} from:`, cert.pdf_url)
+        try {
+          const pdfResponse = await fetch(cert.pdf_url, {
+            method: 'GET',
+            headers: {
+              'Accept': 'application/pdf,*/*'
+            }
+          })
+          
+          console.log(`PDF response for ${cert.certificate_id}:`, pdfResponse.status, pdfResponse.statusText)
+          
+          if (pdfResponse.ok) {
+            const pdfBlob = await pdfResponse.blob()
+            const filename = `${cert.certificate_id}_${cert.participant_name.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`
+            zip.file(filename, pdfBlob)
+            console.log(`Added PDF to ZIP: ${filename} (${pdfBlob.size} bytes)`)
+            certSuccessCount++
+          } else {
+            const errorMsg = `PDF download failed: ${pdfResponse.status} ${pdfResponse.statusText}`
+            console.error(`${cert.certificate_id}: ${errorMsg}`)
+            certErrors.push(`PDF: ${errorMsg}`)
+          }
+        } catch (pdfError) {
+          const errorMsg = `PDF fetch error: ${pdfError instanceof Error ? pdfError.message : 'Unknown error'}`
+          console.error(`${cert.certificate_id}: ${errorMsg}`, pdfError)
+          certErrors.push(`PDF: ${errorMsg}`)
         }
+      } else {
+        console.log(`No PDF URL for certificate ${cert.certificate_id}`)
+        certErrors.push('PDF: No URL available')
       }
 
       // Download JPG if available
       if (cert.jpg_url) {
-        const jpgResponse = await fetch(cert.jpg_url)
-        if (jpgResponse.ok) {
-          const jpgBlob = await jpgResponse.blob()
-          zip.file(`${cert.certificate_id}_${cert.participant_name.replace(/[^a-zA-Z0-9]/g, '_')}.jpg`, jpgBlob)
+        console.log(`Downloading JPG for ${cert.certificate_id} from:`, cert.jpg_url)
+        try {
+          const jpgResponse = await fetch(cert.jpg_url, {
+            method: 'GET',
+            headers: {
+              'Accept': 'image/jpeg,image/*,*/*'
+            }
+          })
+          
+          console.log(`JPG response for ${cert.certificate_id}:`, jpgResponse.status, jpgResponse.statusText)
+          
+          if (jpgResponse.ok) {
+            const jpgBlob = await jpgResponse.blob()
+            const filename = `${cert.certificate_id}_${cert.participant_name.replace(/[^a-zA-Z0-9]/g, '_')}.jpg`
+            zip.file(filename, jpgBlob)
+            console.log(`Added JPG to ZIP: ${filename} (${jpgBlob.size} bytes)`)
+            certSuccessCount++
+          } else {
+            const errorMsg = `JPG download failed: ${jpgResponse.status} ${jpgResponse.statusText}`
+            console.error(`${cert.certificate_id}: ${errorMsg}`)
+            certErrors.push(`JPG: ${errorMsg}`)
+          }
+        } catch (jpgError) {
+          const errorMsg = `JPG fetch error: ${jpgError instanceof Error ? jpgError.message : 'Unknown error'}`
+          console.error(`${cert.certificate_id}: ${errorMsg}`, jpgError)
+          certErrors.push(`JPG: ${errorMsg}`)
         }
+      } else {
+        console.log(`No JPG URL for certificate ${cert.certificate_id}`)
+        certErrors.push('JPG: No URL available')
+      }
+      
+      if (certSuccessCount > 0) {
+        successCount++
+      } else {
+        errorCount++
+        errors.push(`${cert.certificate_id}: ${certErrors.join(', ')}`)
       }
     } catch (error) {
-      console.error(`Failed to download files for certificate ${cert.certificate_id}:`, error)
-      // Continue with other certificates
+      errorCount++
+      const errorMsg = `General error: ${error instanceof Error ? error.message : 'Unknown error'}`
+      console.error(`Failed to process certificate ${cert.certificate_id}:`, error)
+      errors.push(`${cert.certificate_id}: ${errorMsg}`)
     }
   }
 
+  // Add a summary file to the ZIP
+  const summary = `Certificate Download Summary\n` +
+    `Generated: ${new Date().toISOString()}\n` +
+    `Total Certificates: ${certificates.length}\n` +
+    `Successfully Downloaded: ${successCount}\n` +
+    `Failed Downloads: ${errorCount}\n\n` +
+    (errors.length > 0 ? `Errors:\n${errors.join('\n')}\n\n` : '') +
+    `Certificate List:\n` +
+    certificates.map(c => `- ${c.certificate_id}: ${c.participant_name} (PDF: ${c.pdf_url ? 'Available' : 'N/A'}, JPG: ${c.jpg_url ? 'Available' : 'N/A'})`).join('\n')
+    
+  zip.file('DOWNLOAD_SUMMARY.txt', summary)
+  
+  console.log(`ZIP creation complete. Success: ${successCount}, Errors: ${errorCount}`)
+  
   return zip.generateAsync({ type: 'blob' })
 }
 

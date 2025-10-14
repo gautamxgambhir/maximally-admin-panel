@@ -263,8 +263,20 @@ export function CertificateGenerator() {
       return
     }
 
+    if (!selectedTemplate) {
+      toast.error('Please select a certificate template for bulk generation.')
+      setShowTemplateGallery(true)
+      return
+    }
+
     try {
-      const certificates = await createBulkCertificates.mutateAsync(csvData)
+      // Add template to each CSV data item
+      const csvDataWithTemplate = csvData.map(item => ({
+        ...item,
+        template: selectedTemplate
+      }))
+      
+      const certificates = await createBulkCertificates.mutateAsync(csvDataWithTemplate)
       
       // Store certificates for download popup
       setBulkDownloadData(certificates)
@@ -273,6 +285,7 @@ export function CertificateGenerator() {
       // Clear form data
       setCsvData([])
       setCsvFile(null)
+      setSelectedTemplate(null)
       if (fileInputRef.current) {
         fileInputRef.current.value = ''
       }
@@ -310,56 +323,93 @@ export function CertificateGenerator() {
         reader.onload = (e) => {
           const imageDataUrl = e.target?.result as string
           
-          // Create a basic template with the uploaded image as background
-          const basicTemplate = {
-            id: `custom_${Date.now()}`,
-            name: `Custom Template ${new Date().toLocaleDateString()}`,
-            description: 'Template created from uploaded image',
-            category: 'custom',
-            canvas: {
-              width: 800,
-              height: 600,
-              backgroundColor: '#ffffff',
-              backgroundImage: imageDataUrl,
-              showGrid: true,
-              snapToGrid: true,
-              gridSize: 20
-            },
-            elements: [
-              {
-                id: `text_${Date.now()}`,
-                type: 'placeholder' as const,
-                content: 'participant_name',
-                position: { x: 100, y: 100 },
-                size: { width: 300, height: 40 },
-                rotation: 0,
-                zIndex: 1,
-                style: {
-                  fontSize: 24,
-                  fontFamily: 'Arial',
-                  fontWeight: 'bold' as const,
-                  color: '#000000',
-                  textAlign: 'center' as const,
-                  backgroundColor: 'transparent',
-                  borderColor: '#cccccc',
-                  borderWidth: 0,
-                  borderRadius: 0,
-                  opacity: 100,
-                  padding: 0
-                }
-              }
-            ],
-            version: '1.0'
+          // Generate proper UUID for template ID
+          const generateUUID = () => {
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+              const r = Math.random() * 16 | 0
+              const v = c === 'x' ? r : (r & 0x3 | 0x8)
+              return v.toString(16)
+            })
           }
           
-          // Save the template
-          try {
-            saveCustomTemplate(basicTemplate, watchedValues.type || 'participant')
-            toast.success('Template created from image! Check the Custom Templates section.')
-          } catch (error) {
-            console.error('Failed to save template:', error)
-            toast.error('Failed to save template')
+          // Get image dimensions to create proper canvas size
+          const img = new Image()
+          img.onload = async () => {
+            // Create a complete ExtendedCertificateTemplate with all required properties
+            const templateConfig = {
+              id: generateUUID(),
+              name: `Custom Template ${new Date().toLocaleDateString()}`,
+              description: 'Template created from uploaded image',
+              category: 'custom',
+              canvas: {
+                width: img.width || 800,
+                height: img.height || 600,
+                backgroundColor: '#ffffff',
+                backgroundImage: imageDataUrl,
+                showGrid: true,
+                snapToGrid: true,
+                gridSize: 20
+              },
+              elements: [
+                {
+                  id: generateUUID(),
+                  type: 'placeholder' as const,
+                  content: 'participant_name',
+                  position: { x: Math.floor((img.width || 800) * 0.1), y: Math.floor((img.height || 600) * 0.4) },
+                  size: { width: Math.floor((img.width || 800) * 0.8), height: Math.floor((img.height || 600) * 0.1) },
+                  rotation: 0,
+                  zIndex: 1,
+                  style: {
+                    fontSize: Math.floor((img.width || 800) / 20),
+                    fontFamily: 'Arial',
+                    fontWeight: 'bold' as const,
+                    color: '#000000',
+                    textAlign: 'center' as const,
+                    backgroundColor: 'transparent',
+                    borderColor: '#cccccc',
+                    borderWidth: 0,
+                    borderRadius: 0,
+                    opacity: 100,
+                    padding: 0
+                  }
+                },
+                {
+                  id: generateUUID(),
+                  type: 'placeholder' as const,
+                  content: 'hackathon_name',
+                  position: { x: Math.floor((img.width || 800) * 0.1), y: Math.floor((img.height || 600) * 0.6) },
+                  size: { width: Math.floor((img.width || 800) * 0.8), height: Math.floor((img.height || 600) * 0.08) },
+                  rotation: 0,
+                  zIndex: 1,
+                  style: {
+                    fontSize: Math.floor((img.width || 800) / 30),
+                    fontFamily: 'Arial',
+                    fontWeight: 'normal' as const,
+                    color: '#666666',
+                    textAlign: 'center' as const,
+                    backgroundColor: 'transparent',
+                    borderColor: '#cccccc',
+                    borderWidth: 0,
+                    borderRadius: 0,
+                    opacity: 100,
+                    padding: 0
+                  }
+                }
+              ],
+              version: '1.0'
+            }
+            
+            // Save the template
+            try {
+              await saveCustomTemplate(templateConfig, watchedValues.type || 'participant')
+              toast.success('Template created from image! Check the Custom Templates section.')
+            } catch (error) {
+              console.error('Failed to save template:', error)
+              toast.error('Failed to save template')
+            }
           }
+          
+          img.src = imageDataUrl
         }
         reader.readAsDataURL(file)
       }
@@ -628,6 +678,69 @@ export function CertificateGenerator() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
+              {/* Template Selection for Bulk */}
+              <div className="p-4 border rounded-lg bg-gray-50">
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <h3 className="text-lg font-medium flex items-center gap-2">
+                      <Palette className="h-5 w-5" />
+                      Certificate Template
+                    </h3>
+                    <p className="text-sm text-gray-600">Choose a design template for all certificates in this batch</p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowTemplateGallery(true)}
+                    className="flex items-center gap-2"
+                  >
+                    <Palette className="h-4 w-4" />
+                    {selectedTemplate ? 'Change Template' : 'Choose Template'}
+                  </Button>
+                </div>
+                
+                {selectedTemplate ? (
+                  <div className="flex items-center gap-4 p-3 bg-white border rounded-lg">
+                    <div 
+                      dangerouslySetInnerHTML={{ __html: selectedTemplate.preview }}
+                      className="flex-shrink-0 scale-75"
+                    />
+                    <div className="flex-1">
+                      <h4 className="font-medium">{selectedTemplate.name}</h4>
+                      <p className="text-sm text-gray-600">{selectedTemplate.title}</p>
+                      <div className="flex items-center gap-2 mt-2">
+                        <span className="text-xs text-gray-500">Colors:</span>
+                        <div className="flex gap-1">
+                          <div 
+                            className="w-3 h-3 rounded-full border border-gray-300"
+                            style={{ backgroundColor: selectedTemplate.primaryColor }}
+                            title={`Primary: ${selectedTemplate.primaryColor}`}
+                          />
+                          <div 
+                            className="w-3 h-3 rounded-full border border-gray-300"
+                            style={{ backgroundColor: selectedTemplate.secondaryColor }}
+                            title={`Secondary: ${selectedTemplate.secondaryColor}`}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setSelectedTemplate(null)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <Palette className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                    <p>No template selected. Choose a template for bulk generation.</p>
+                  </div>
+                )}
+              </div>
+
               <div className="space-y-4">
                 <div className="flex items-center gap-4">
                   <div className="flex-1">

@@ -90,6 +90,86 @@ export async function isUserAdmin(userId: string): Promise<boolean> {
 }
 
 /**
+ * Get all admin users
+ */
+export async function getAllAdmins(): Promise<ProfileApiResult<Profile[]>> {
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('role', 'admin')
+      .order('created_at', { ascending: false })
+
+    return { data, error }
+  } catch (error) {
+    return { data: null, error }
+  }
+}
+
+/**
+ * Search admin users by email, username, or full name
+ */
+export async function searchAdmins(searchTerm: string): Promise<ProfileApiResult<Profile[]>> {
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('role', 'admin')
+      .or(`email.ilike.%${searchTerm}%,username.ilike.%${searchTerm}%,full_name.ilike.%${searchTerm}%`)
+      .order('created_at', { ascending: false })
+
+    return { data, error }
+  } catch (error) {
+    return { data: null, error }
+  }
+}
+
+/**
+ * Get paginated list of admin users
+ */
+export async function getAdminsPaginated(
+  page: number = 0,
+  limit: number = 10,
+  searchTerm?: string
+): Promise<ProfileApiResult<{ admins: Profile[]; totalCount: number }>> {
+  try {
+    let query = supabase
+      .from('profiles')
+      .select('*', { count: 'exact' })
+      .eq('role', 'admin')
+
+    if (searchTerm && searchTerm.trim()) {
+      query = query.or(`email.ilike.%${searchTerm}%,username.ilike.%${searchTerm}%,full_name.ilike.%${searchTerm}%`)
+    }
+
+    const { data, error, count } = await query
+      .order('created_at', { ascending: false })
+      .range(page * limit, (page + 1) * limit - 1)
+
+    if (error) {
+      return { data: null, error }
+    }
+
+    return {
+      data: {
+        admins: data || [],
+        totalCount: count || 0
+      },
+      error: null
+    }
+  } catch (error) {
+    return { data: null, error }
+  }
+}
+
+/**
+ * Delete admin user (set to user role)
+ */
+export async function removeAdminRole(userId: string): Promise<ProfileApiResult<Profile>> {
+  return updateUserRole(userId, 'user')
+}
+
+/**
  * Toggle user admin status by email
  */
 export async function toggleAdminRole(email: string): Promise<ProfileApiResult<{ profile: Profile; isNowAdmin: boolean }>> {

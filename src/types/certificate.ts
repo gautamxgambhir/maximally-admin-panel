@@ -15,6 +15,7 @@ export interface Certificate {
   generated_by: string
   admin_email?: string
   maximally_username: string
+  batch_id?: string // For tracking bulk generation batches
   created_at: string
   updated_at: string
 }
