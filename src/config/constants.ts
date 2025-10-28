@@ -5,7 +5,7 @@ export const CERTIFICATE_CONFIG = {
   // Verification URL - change this for testing
   // For development: 'http://localhost:5000'
   // For production: 'https://maximally.in'
-  VERIFICATION_BASE_URL: 'http://localhost:5000',
+  VERIFICATION_BASE_URL: 'https://maximally.in',
   
   // Full verification URL template
   get VERIFICATION_URL() {
