@@ -12,6 +12,11 @@ export const CERTIFICATE_CONFIG = {
     return `${this.VERIFICATION_BASE_URL}/certificates/verify`
   },
   
+  // API verification URL template (for programmatic access)
+  get API_VERIFICATION_URL() {
+    return `${this.VERIFICATION_BASE_URL}/api/certificates/verify`
+  },
+  
   // Certificate ID format
   ID_FORMAT: 'CERT-XXXXXX',
   ID_LENGTH: 6,
@@ -54,12 +59,22 @@ export const ENV_CONFIG = {
     
     // For production
     return 'https://maximally.in'
+  },
+  
+  // API base URL for programmatic access
+  get API_BASE_URL() {
+    return this.VERIFICATION_BASE_URL
   }
 }
 
-// Helper function to get verification URL for a certificate
+// Helper function to get verification URL for a certificate (for QR codes and user-facing links)
 export const getVerificationUrl = (certificateId: string): string => {
   return `${CERTIFICATE_CONFIG.VERIFICATION_BASE_URL}/certificates/verify/${certificateId}`
+}
+
+// Helper function to get API verification URL for programmatic access
+export const getApiVerificationUrl = (certificateId: string): string => {
+  return `${CERTIFICATE_CONFIG.VERIFICATION_BASE_URL}/api/certificates/verify/${certificateId}`
 }
 
 // Helper function to get QR code verification URL  
