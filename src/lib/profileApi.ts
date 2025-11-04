@@ -15,7 +15,7 @@ export async function getProfile(userId: string): Promise<ProfileApiResult<Profi
       .from('profiles')
       .select('*')
       .eq('id', userId)
-      .single()
+      .maybeSingle()
 
     return { data, error }
   } catch (error) {
@@ -32,7 +32,7 @@ export async function getProfileByEmail(email: string): Promise<ProfileApiResult
       .from('profiles')
       .select('*')
       .eq('email', email)
-      .single()
+      .maybeSingle()
 
     return { data, error }
   } catch (error) {
@@ -50,7 +50,7 @@ export async function updateUserRole(userId: string, role: UserRole): Promise<Pr
       .update({ role, updated_at: new Date().toISOString() })
       .eq('id', userId)
       .select()
-      .single()
+      .maybeSingle()
 
     return { data, error }
   } catch (error) {
@@ -68,7 +68,7 @@ export async function updateUserRoleByEmail(email: string, role: UserRole): Prom
       .update({ role, updated_at: new Date().toISOString() })
       .eq('email', email)
       .select()
-      .single()
+      .maybeSingle()
 
     return { data, error }
   } catch (error) {

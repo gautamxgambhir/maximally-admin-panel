@@ -21,7 +21,7 @@ export async function getBlogById(id: string): Promise<Blog> {
     .from('blogs')
     .select('*')
     .eq('id', id)
-    .single()
+    .maybeSingle()
   
   if (error) throw error
   const row: any = data

@@ -17,9 +17,10 @@ export async function getHackathonById(id: string): Promise<Hackathon> {
     .from('hackathons')
     .select('*')
     .eq('id', id)
-    .single()
+    .maybeSingle()
   
   if (error) throw error
+  if (!data) throw new Error('Hackathon not found')
   return data
 }
 
@@ -28,8 +29,9 @@ export async function getHackathonByIdV2(id: string): Promise<HackathonV2> {
     .from('hackathons')
     .select('*')
     .eq('id', id)
-    .single()
+    .maybeSingle()
   if (error) throw error
+  if (!data) throw new Error('Hackathon not found')
   return data as unknown as HackathonV2
 }
 
