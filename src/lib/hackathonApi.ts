@@ -5,6 +5,7 @@ export async function getHackathons(): Promise<Hackathon[]> {
   const { data, error } = await supabase
     .from('hackathons')
     .select('*')
+    .order('sort_order', { ascending: true })
     .order('created_at', { ascending: false })
   
   if (error) throw error
@@ -138,4 +139,41 @@ export async function updateHackathonV2(hackathonData: UpdateHackathonV2Data): P
     throw new Error('No row returned from hackathon v2 update — this may be due to RLS/policies preventing the authenticated role from seeing the updated row')
   }
   return row as HackathonV2
+}
+
+// Function to get the next sort order (for new hackathons to be added at top)
+export async function getNextSortOrder(): Promise<number> {
+  const { data, error } = await supabase
+    .from('hackathons')
+    .select('sort_order')
+    .order('sort_order', { ascending: true })
+    .limit(1)
+
+  if (error) throw error
+  
+  // If no hackathons exist or the first one doesn't have sort_order, start at 0
+  if (!data || data.length === 0 || data[0].sort_order === null) {
+    return 0
+  }
+  
+  // Return one less than the current minimum to add at top
+  return data[0].sort_order - 1
+}
+
+// Function to update sort orders for multiple hackathons (for drag and drop)
+export async function updateHackathonSortOrders(updates: { id: number; sort_order: number }[]): Promise<void> {
+  const { error } = await supabase.rpc('update_hackathon_sort_orders', {
+    updates: updates
+  })
+  
+  if (error) {
+    // Fallback to individual updates if RPC function doesn't exist
+    console.warn('RPC function not available, falling back to individual updates')
+    for (const update of updates) {
+      await supabase
+        .from('hackathons')
+        .update({ sort_order: update.sort_order })
+        .eq('id', update.id)
+    }
+  }
 }

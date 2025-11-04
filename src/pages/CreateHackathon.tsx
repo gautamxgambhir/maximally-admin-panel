@@ -23,6 +23,7 @@ const simpleHackathonSchema = z.object({
   focus_areas_text: z.string().min(1, 'Focus areas are required'),
   devpost_url: z.string().url('Please enter a valid URL').min(1, 'Devpost URL is required'),
   devpost_register_url: z.string().url('Please enter a valid URL').min(1, 'Devpost register URL is required'),
+  sort_order: z.number().optional(),
 })
 
 type SimpleHackathonForm = z.infer<typeof simpleHackathonSchema>
@@ -52,6 +53,13 @@ export function CreateHackathon() {
       const focusAreas = data.focus_areas_text 
         ? data.focus_areas_text.split(',').map(area => area.trim()).filter(area => area) 
         : []
+
+      // Get the sort order - use provided value or get next available for top position
+      let sortOrder = data.sort_order
+      if (sortOrder === undefined || sortOrder === null) {
+        const { getNextSortOrder } = await import('@/lib/hackathonApi')
+        sortOrder = await getNextSortOrder()
+      }
 
       const formattedData: CreateHackathonV2Data = {
         // User provided fields (all required now)
@@ -89,6 +97,7 @@ export function CreateHackathon() {
         theme_color_secondary: '#fbbf24',
         theme_color_accent: '#10b981',
         is_active: true,
+        sort_order: sortOrder, // Add at the top
       }
 
       await createHackathon.mutateAsync(formattedData)
@@ -275,6 +284,23 @@ export function CreateHackathon() {
                   <p className="text-sm text-red-500">{errors.devpost_register_url.message}</p>
                 )}
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="sort_order">Display Order (Optional)</Label>
+              <Input
+                id="sort_order"
+                type="number"
+                placeholder="0 (lower numbers appear first)"
+                {...register('sort_order', { valueAsNumber: true })}
+                disabled={isSubmitting}
+              />
+              <p className="text-xs text-muted-foreground">
+                Leave empty to add at the top. Lower numbers appear first in the events page.
+              </p>
+              {errors.sort_order && (
+                <p className="text-sm text-red-500">{errors.sort_order.message}</p>
+              )}
             </div>
 
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">

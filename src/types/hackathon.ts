@@ -82,6 +82,7 @@ export interface HackathonV2 {
   devpost_url?: string
   devpost_register_url?: string
   is_active: boolean
+  sort_order: number // New field for custom sorting
   created_at: string
   updated_at: string
 }
@@ -131,6 +132,7 @@ export interface CreateHackathonV2Data {
   devpost_url?: string
   devpost_register_url?: string
   is_active?: boolean
+  sort_order?: number // New field for custom sorting
 }
 
 export interface UpdateHackathonV2Data extends Partial<CreateHackathonV2Data> {
