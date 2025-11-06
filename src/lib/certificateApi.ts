@@ -15,6 +15,7 @@ import {
   CERTIFICATE_TEMPLATES,
   convertToCertificateTemplate
 } from './certificateUtils'
+import { sendCertificateEmails } from './emailApi'
 
 /**
  * Create a single certificate
@@ -88,6 +89,7 @@ export async function createCertificate(data: CreateCertificateData): Promise<Ce
     throw new Error(`Failed to create certificate: ${error.message}`)
   }
 
+  // Email sending is handled at the UI layer (hooks) to provide immediate feedback and avoid double-sending.
   return certificate
 }
 
@@ -194,6 +196,7 @@ export async function createCertificateWithBatch(data: CreateCertificateData & {
     throw new Error(`Failed to create certificate: ${error.message}`)
   }
 
+  // Email sending is handled at the UI layer (hooks) to provide immediate feedback and avoid double-sending.
   return certificate
 }
 
@@ -315,7 +318,7 @@ export async function deleteCertificate(id: string): Promise<void> {
       let pdfPath = certificate.pdf_url
       if (pdfPath.includes('supabase.co')) {
         // Extract the file path from the full Supabase URL
-        // URL format: https://[project].supabase.co/storage/v1/object/public/certificates/[filename]
+        // URL format: https://[project].supabase.co/storage/v1/object/public|sign/certificates/[filename]
         const urlParts = pdfPath.split('/storage/v1/object/')
         if (urlParts.length > 1) {
           const pathPart = urlParts[1]
@@ -329,7 +332,7 @@ export async function deleteCertificate(id: string): Promise<void> {
         // If it's just a filename, use it as is
         pdfPath = pdfPath.split('/').pop() || pdfPath
       }
-      if (pdfPath && pdfPath !== certificate.pdf_url) {
+      if (pdfPath) {
         filesToDelete.push(pdfPath)
       }
     } catch (error) {
@@ -356,7 +359,7 @@ export async function deleteCertificate(id: string): Promise<void> {
         // If it's just a filename, use it as is
         jpgPath = jpgPath.split('/').pop() || jpgPath
       }
-      if (jpgPath && jpgPath !== certificate.jpg_url) {
+      if (jpgPath) {
         filesToDelete.push(jpgPath)
       }
     } catch (error) {
@@ -364,13 +367,19 @@ export async function deleteCertificate(id: string): Promise<void> {
     }
   }
 
+  // Also attempt deletion using deterministic filenames as a fallback
+  filesToDelete.push(`${certificate.certificate_id}.pdf`, `${certificate.certificate_id}.jpg`)
+
+  // Deduplicate paths
+  const uniquePaths = Array.from(new Set(filesToDelete.filter(Boolean)))
+
   // Delete files from storage if any were found
-  if (filesToDelete.length > 0) {
-    console.log('Attempting to delete files from storage:', filesToDelete)
+  if (uniquePaths.length > 0) {
+    console.log('Attempting to delete files from storage:', uniquePaths)
     
     const { data: deletedFiles, error: storageError } = await supabase.storage
       .from('certificates')
-      .remove(filesToDelete)
+      .remove(uniquePaths)
 
     if (storageError) {
       console.error('Failed to delete files from storage:', storageError)

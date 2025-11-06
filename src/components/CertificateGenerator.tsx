@@ -48,6 +48,7 @@ import { BulkDownloadPopup } from './BulkDownloadPopup'
 import { getTemplateById, type ExtendedCertificateTemplate } from '@/lib/certificateTemplates'
 import { useCustomTemplates } from '@/hooks/useCustomTemplates'
 import type { CertificateType, CreateCertificateData, Certificate } from '@/types/certificate'
+import { sendCertificateEmails } from '@/lib/emailApi'
 
 const certificateSchema = z.object({
   participant_name: z.string().min(1, 'Participant name is required'),
@@ -106,6 +107,12 @@ export function CertificateGenerator() {
   const createCertificate = useCreateCertificate()
   const createBulkCertificates = useCreateBulkCertificates()
   
+  // Email sending preferences / confirm modals
+  const [showConfirmSingle, setShowConfirmSingle] = useState(false)
+  const [sendEmailAfterSingle, setSendEmailAfterSingle] = useState(true)
+  const [showConfirmBulk, setShowConfirmBulk] = useState(false)
+  const [sendEmailAfterBulk, setSendEmailAfterBulk] = useState(true)
+  
   // Custom templates
   const {
     customTemplates,
@@ -133,26 +140,38 @@ export function CertificateGenerator() {
       return
     }
 
+    setShowConfirmSingle(true)
+  }
+
+  const executeSingleGeneration = async () => {
+    const values = form.getValues()
     const certificateData: CreateCertificateData = {
-      participant_name: data.participant_name,
-      participant_email: data.participant_email || undefined,
-      hackathon_name: data.hackathon_name,
-      type: data.type,
-      position: data.position || undefined,
-      maximally_username: data.maximally_username,
-      template: selectedTemplate // Pass the selected template
+      participant_name: values.participant_name,
+      participant_email: values.participant_email || undefined,
+      hackathon_name: values.hackathon_name,
+      type: values.type,
+      position: values.position || undefined,
+      maximally_username: values.maximally_username,
+      template: selectedTemplate!
     }
 
     try {
-      await createCertificate.mutateAsync(certificateData)
+      const created = await createCertificate.mutateAsync(certificateData)
+
+      // Optionally send email after generation
+      if (sendEmailAfterSingle && created.participant_email) {
+        const res = await sendCertificateEmails([created])
+        if (res.failed === 0) toast.success(`Email sent to ${created.participant_email}`)
+        else toast.warning(`Email not sent: ${res.errors?.[0] || 'Unknown error'}`)
+      }
+
       form.reset()
-      setSelectedTemplate(null) // Reset template selection
-      
-      // Redirect to certificate management (list tab)
+      setSelectedTemplate(null)
+      setShowConfirmSingle(false)
       navigate('/certificates?tab=list')
-      toast.success('Certificate generated successfully! Redirecting to certificate management...')
-    } catch (error) {
-      // Error handled by the hook
+      toast.success('Certificate generated successfully!')
+    } catch (_) {
+      // handled by hook toast
     }
   }
   
@@ -269,28 +288,44 @@ export function CertificateGenerator() {
       return
     }
 
+    setShowConfirmBulk(true)
+  }
+
+  const executeBulkGeneration = async () => {
     try {
       // Add template to each CSV data item
       const csvDataWithTemplate = csvData.map(item => ({
         ...item,
-        template: selectedTemplate
+        template: selectedTemplate!
       }))
-      
+
       const certificates = await createBulkCertificates.mutateAsync(csvDataWithTemplate)
-      
+
+      // Optionally send emails for those with participant_email
+      if (sendEmailAfterBulk) {
+        const withEmails = certificates.filter(c => !!c.participant_email)
+        if (withEmails.length > 0) {
+          const res = await sendCertificateEmails(withEmails)
+          if (res.failed === 0) toast.success(`Sent ${res.sent} emails`)
+          else if (res.sent > 0) toast.warning(`Sent ${res.sent}, failed ${res.failed}`)
+          else toast.error('Failed to send any emails')
+        }
+      }
+
       // Store certificates for download popup
       setBulkDownloadData(certificates)
       setShowBulkDownloadPopup(true)
-      
+
       // Clear form data
       setCsvData([])
       setCsvFile(null)
       setSelectedTemplate(null)
+      setShowConfirmBulk(false)
       if (fileInputRef.current) {
         fileInputRef.current.value = ''
       }
-    } catch (error) {
-      // Error handled by the hook
+    } catch (_) {
+      // handled by hook toast
     }
   }
 
@@ -848,14 +883,21 @@ export function CertificateGenerator() {
                           <AlertDialogHeader>
                             <AlertDialogTitle>Generate Bulk Certificates</AlertDialogTitle>
                             <AlertDialogDescription>
-                              Are you sure you want to generate {csvData.length} certificates? 
-                              This action cannot be undone and will create certificate files and database records.
+                              Are you sure you want to generate {csvData.length} certificates?
                             </AlertDialogDescription>
                           </AlertDialogHeader>
+
+                          <div className="space-y-2 py-2">
+                            <label className="flex items-center gap-2 text-sm">
+                              <input type="checkbox" checked={sendEmailAfterBulk} onChange={e => setSendEmailAfterBulk(e.target.checked)} />
+                              Send emails after generation (for rows with email)
+                            </label>
+                          </div>
+
                           <AlertDialogFooter>
                             <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={handleBulkCreate}>
-                              Generate All Certificates
+                            <AlertDialogAction onClick={executeBulkGeneration}>
+                              {sendEmailAfterBulk ? 'Generate & Send' : 'Generate Only'}
                             </AlertDialogAction>
                           </AlertDialogFooter>
                         </AlertDialogContent>
@@ -880,6 +922,32 @@ export function CertificateGenerator() {
         onCreateCustomTemplate={handleCreateCustomTemplate}
         onDeleteCustomTemplate={deleteCustomTemplate}
       />
+
+      {/* Confirm Single Generation */}
+      <AlertDialog open={showConfirmSingle} onOpenChange={setShowConfirmSingle}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Generate Certificate</AlertDialogTitle>
+            <AlertDialogDescription>
+              Choose whether to send the certificate email after generation.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <div className="space-y-2 py-2">
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={sendEmailAfterSingle} onChange={e => setSendEmailAfterSingle(e.target.checked)} />
+              Send email to participant after generation
+            </label>
+          </div>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={executeSingleGeneration}>
+              {sendEmailAfterSingle ? 'Generate & Send' : 'Generate Only'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Bulk Download Popup */}
       {bulkDownloadData && (

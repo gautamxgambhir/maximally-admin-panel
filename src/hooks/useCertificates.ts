@@ -91,7 +91,9 @@ export function useCreateCertificate() {
         newCertificate
       )
       
-      toast.success(`Certificate created successfully for ${newCertificate.participant_name}`)
+      toast.success(`Certificate created for ${newCertificate.participant_name}`)
+
+      // Email sending (if desired) is handled in the component layer.
     },
     onError: (error) => {
       console.error('Failed to create certificate:', error)
@@ -119,10 +121,12 @@ export function useCreateBulkCertificates() {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.hackathonNames })
       
       if (certificates.length > 0) {
-        toast.success(`Successfully created ${certificates.length} certificates`)
+        toast.success(`Created ${certificates.length} certificates`)
       } else {
         toast.warning('No certificates were created')
       }
+
+      // Email sending (if desired) is handled in the component layer.
     },
     onError: (error) => {
       console.error('Failed to create bulk certificates:', error)

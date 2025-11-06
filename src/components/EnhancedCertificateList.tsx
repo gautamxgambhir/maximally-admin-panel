@@ -85,6 +85,7 @@ import { createCertificateZip, downloadBlob } from '@/lib/certificateUtils'
 import { getVerificationUrl } from '@/config/constants'
 import type { Certificate, CertificateFilters, CertificateStatus, CertificateType } from '@/types/certificate'
 import ErrorBoundary from './ErrorBoundary'
+import { sendCertificateEmails } from '@/lib/emailApi'
 
 const certificateTypeConfig = {
   winner: { label: 'Winner', icon: Award, color: 'bg-yellow-100 text-yellow-800 border-yellow-200' },
@@ -281,6 +282,25 @@ export function EnhancedCertificateList() {
     }
   }
 
+  // Resend single email
+  const handleResendSingle = async (certificate: Certificate) => {
+    if (!certificate.participant_email) {
+      toast.error('No participant email on this certificate')
+      return
+    }
+    const toastId = toast.loading('Resending email...')
+    try {
+      const res = await sendCertificateEmails([certificate])
+      if (res.failed === 0) {
+        toast.success(`Email resent to ${certificate.participant_email}`, { id: toastId })
+      } else {
+        toast.error(`Resend failed: ${res.errors?.[0] || 'Unknown error'}`, { id: toastId })
+      }
+    } catch (e) {
+      toast.error('Resend failed', { id: toastId })
+    }
+  }
+
   // Bulk download
   const handleBulkDownload = async () => {
     if (selectedCertificates.length === 0) {
@@ -305,6 +325,32 @@ export function EnhancedCertificateList() {
       toast.error('Failed to create download archive')
     } finally {
       setBulkDownloadLoading(false)
+    }
+  }
+
+  // Bulk resend
+  const handleBulkResend = async () => {
+    if (selectedCertificates.length === 0) {
+      toast.error('Please select certificates to resend')
+      return
+    }
+    const selectedCerts = certificates.filter(cert => selectedCertificates.includes(cert.id) && !!cert.participant_email)
+    if (selectedCerts.length === 0) {
+      toast.error('None of the selected certificates have participant emails')
+      return
+    }
+    const toastId = toast.loading(`Resending to ${selectedCerts.length} recipients...`)
+    try {
+      const res = await sendCertificateEmails(selectedCerts)
+      if (res.failed === 0) {
+        toast.success(`Resent ${res.sent} emails`, { id: toastId })
+      } else if (res.sent > 0) {
+        toast.warning(`Sent ${res.sent}, failed ${res.failed}`, { id: toastId })
+      } else {
+        toast.error('Failed to resend any emails', { id: toastId })
+      }
+    } catch (e) {
+      toast.error('Bulk resend failed', { id: toastId })
     }
   }
 
@@ -454,6 +500,10 @@ export function EnhancedCertificateList() {
                   <DropdownMenuItem onClick={handleBulkDownload} disabled={bulkDownloadLoading}>
                     <Archive className="h-4 w-4 mr-2" />
                     {bulkDownloadLoading ? 'Creating ZIP...' : 'Download ZIP'}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleBulkResend}>
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Resend Emails to Selected
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleBulkDelete} className="text-red-600 focus:text-red-600 focus:bg-red-50">
@@ -898,6 +948,11 @@ export function EnhancedCertificateList() {
                                 Download JPG
                               </DropdownMenuItem>
                             )}
+
+                            <DropdownMenuItem onClick={() => handleResendSingle(certificate)}>
+                              <RefreshCw className="h-4 w-4 mr-2" />
+                              Resend Email
+                            </DropdownMenuItem>
                             
                             <DropdownMenuSeparator />
                             
