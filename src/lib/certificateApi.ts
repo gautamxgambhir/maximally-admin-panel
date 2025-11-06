@@ -77,7 +77,7 @@ export async function createCertificate(data: CreateCertificateData): Promise<Ce
       jpg_url: jpgUrl,
       status: 'active',
       generated_by: user.id,
-      admin_email: profile?.email || user.email,
+      admin_email: profile?.email || user?.email || 'admin@maximally.com',
       maximally_username: data.maximally_username,
       template_id: (data.template && 'id' in data.template && !('isCustom' in data.template)) ? data.template.id : null
     })
@@ -182,7 +182,7 @@ export async function createCertificateWithBatch(data: CreateCertificateData & {
       jpg_url: jpgUrl,
       status: 'active',
       generated_by: user.id,
-      admin_email: profile?.email || user.email,
+      admin_email: profile?.email || user?.email || 'admin@maximally.com',
       maximally_username: data.maximally_username,
       template_id: (data.template && 'id' in data.template && !('isCustom' in data.template)) ? data.template.id : null,
       batch_id: data.batch_id // Add batch ID for bulk generation tracking

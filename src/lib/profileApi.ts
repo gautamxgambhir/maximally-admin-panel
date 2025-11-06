@@ -174,8 +174,13 @@ export async function removeAdminRole(userId: string): Promise<ProfileApiResult<
  */
 export async function toggleAdminRole(email: string): Promise<ProfileApiResult<{ profile: Profile; isNowAdmin: boolean }>> {
   try {
+    console.log('🔍 Toggling admin role for:', email)
+    
     // First get the current profile
     const { data: profile, error: getError } = await getProfileByEmail(email)
+    
+    console.log('📋 Current profile:', profile)
+    console.log('❌ Get error:', getError)
     
     if (getError) {
       return { data: null, error: getError }
@@ -188,21 +193,40 @@ export async function toggleAdminRole(email: string): Promise<ProfileApiResult<{
     // Toggle the role
     const newRole: UserRole = profile.role === 'admin' ? 'user' : 'admin'
     
-    // Update the role
-    const { data: updatedProfile, error: updateError } = await updateUserRole(profile.id, newRole)
+    console.log('🔄 Changing role from', profile.role, 'to', newRole)
+    
+    // Try direct update instead of using updateUserRole
+    const { data: updateResult, error: updateError } = await supabase
+      .from('profiles')
+      .update({ role: newRole })
+      .eq('email', email)
+      .select()
+      .single()
+    
+    console.log('✏️ Update result:', updateResult)
+    console.log('❌ Update error:', updateError)
     
     if (updateError) {
+      console.error('Update failed with error:', updateError)
       return { data: null, error: updateError }
     }
 
+    if (!updateResult) {
+      console.error('No data returned from update')
+      return { data: null, error: { message: 'Update failed - no data returned' } }
+    }
+
+    console.log('✅ Successfully updated profile:', updateResult)
+
     return { 
       data: { 
-        profile: updatedProfile!, 
+        profile: updateResult, 
         isNowAdmin: newRole === 'admin' 
       }, 
       error: null 
     }
   } catch (error) {
+    console.error('Unexpected error in toggleAdminRole:', error)
     return { data: null, error }
   }
 }

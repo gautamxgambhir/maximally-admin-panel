@@ -71,17 +71,15 @@ export function JudgeSelector({
               )}
             </div>
             {selectedJudge && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-6 w-6 p-0 hover:bg-gray-100 mr-2"
+              <div
+                className="h-6 w-6 p-0 hover:bg-gray-100 mr-2 rounded cursor-pointer flex items-center justify-center"
                 onClick={(e) => {
                   e.stopPropagation()
                   handleClear()
                 }}
               >
                 <X className="h-3 w-3" />
-              </Button>
+              </div>
             )}
           </SelectTrigger>
           <SelectContent className="max-h-60">
