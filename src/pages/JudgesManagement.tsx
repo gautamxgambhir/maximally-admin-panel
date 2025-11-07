@@ -62,11 +62,11 @@ export function JudgesManagement() {
     // Swap display orders
     try {
       await updateJudge.mutateAsync({
-        ...currentJudge,
+        id: currentJudge.id,
         display_order: targetJudge.display_order
       })
       await updateJudge.mutateAsync({
-        ...targetJudge,
+        id: targetJudge.id,
         display_order: currentJudge.display_order
       })
     } catch (error) {

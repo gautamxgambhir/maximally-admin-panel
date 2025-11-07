@@ -11,7 +11,7 @@ export interface Judge {
   username?: string
   headline?: string
   location?: string
-  tier?: string
+  tier?: 'starter' | 'verified' | 'senior' | 'chief' | 'legacy'
   total_events_judged?: number
   total_teams_evaluated?: number
   total_mentorship_hours?: number
