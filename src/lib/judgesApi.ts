@@ -8,6 +8,14 @@ export interface Judge {
   display_order: number
   created_at: string
   updated_at: string
+  username?: string
+  headline?: string
+  location?: string
+  tier?: string
+  total_events_judged?: number
+  total_teams_evaluated?: number
+  total_mentorship_hours?: number
+  is_published?: boolean
 }
 
 export interface JudgeInput {
@@ -15,22 +23,52 @@ export interface JudgeInput {
   role_in_company: string
   company: string
   display_order?: number
+  username?: string
+  headline?: string
+  location?: string
+  tier?: 'starter' | 'verified' | 'senior' | 'chief' | 'legacy'
+  total_events_judged?: number
+  total_teams_evaluated?: number
+  total_mentorship_hours?: number
+  is_published?: boolean
 }
 
 export interface JudgeUpdate extends Partial<JudgeInput> {
   id: number
 }
 
-// Get all judges
+// Get all judges - fetch from API instead of direct Supabase query
 export async function getJudges(): Promise<Judge[]> {
-  const { data, error } = await supabase
-    .from('judges')
-    .select('*')
-    .order('display_order', { ascending: true })
-    .order('created_at', { ascending: true })
-
-  if (error) throw error
-  return data || []
+  const response = await fetch('/api/judges')
+  
+  if (!response.ok) {
+    throw new Error('Failed to fetch judges')
+  }
+  
+  const data = await response.json()
+  console.log('Judges data from API:', data)
+  
+  // Map the API response to the expected interface
+  const mapped = (data || []).map((judge: any, index: number) => ({
+    id: judge.id,
+    name: judge.fullName || '',
+    role_in_company: judge.currentRole || '',
+    company: judge.company || '',
+    display_order: index + 1,
+    created_at: judge.createdAt || new Date().toISOString(),
+    updated_at: judge.createdAt || new Date().toISOString(),
+    username: judge.username,
+    headline: judge.headline,
+    location: judge.location,
+    tier: judge.tier,
+    total_events_judged: judge.totalEventsJudged || 0,
+    total_teams_evaluated: judge.totalTeamsEvaluated || 0,
+    total_mentorship_hours: judge.totalMentorshipHours || 0,
+    is_published: judge.isPublished
+  }))
+  
+  console.log('Mapped judges data:', mapped)
+  return mapped
 }
 
 
@@ -38,45 +76,115 @@ export async function getJudges(): Promise<Judge[]> {
 export async function getJudge(id: number): Promise<Judge | null> {
   const { data, error } = await supabase
     .from('judges')
-    .select('*')
+    .select('id, full_name, role_title, company, created_at, updated_at')
     .eq('id', id)
     .maybeSingle()
 
   if (error) throw error
-  return data
+  if (!data) return null
+  
+  return {
+    id: data.id,
+    name: data.full_name || '',
+    role_in_company: data.role_title || '',
+    company: data.company || '',
+    display_order: 0,
+    created_at: data.created_at,
+    updated_at: data.updated_at
+  }
 }
 
 // Create a new judge
 export async function createJudge(judge: JudgeInput): Promise<Judge> {
+  const insertData: any = {
+    full_name: judge.name,
+    role_title: judge.role_in_company,
+    company: judge.company,
+    username: judge.username || judge.name.toLowerCase().replace(/\s+/g, '_'),
+    tier: judge.tier || 'starter',
+    is_published: judge.is_published ?? true,
+    display_order: judge.display_order ?? 0
+  }
+  
+  if (judge.headline) insertData.headline = judge.headline
+  if (judge.location) insertData.judge_location = judge.location
+  if (judge.total_events_judged !== undefined) insertData.total_events_judged = judge.total_events_judged
+  if (judge.total_teams_evaluated !== undefined) insertData.total_teams_evaluated = judge.total_teams_evaluated
+  if (judge.total_mentorship_hours !== undefined) insertData.total_mentorship_hours = judge.total_mentorship_hours
+
   const { data, error } = await supabase
     .from('judges')
-    .insert([{
-      ...judge,
-      display_order: judge.display_order ?? 0
-    }])
+    .insert([insertData])
     .select('*')
     .single()
 
   if (error) throw error
-  return data
+  
+  return {
+    id: data.id,
+    name: data.full_name,
+    role_in_company: data.role_title,
+    company: data.company,
+    display_order: data.display_order || 0,
+    created_at: data.created_at,
+    updated_at: data.updated_at,
+    username: data.username,
+    headline: data.headline,
+    location: data.judge_location,
+    tier: data.tier,
+    total_events_judged: data.total_events_judged,
+    total_teams_evaluated: data.total_teams_evaluated,
+    total_mentorship_hours: data.total_mentorship_hours,
+    is_published: data.is_published
+  }
 }
 
 // Update an existing judge
 export async function updateJudge(judge: JudgeUpdate): Promise<Judge> {
-  const { id, ...updateData } = judge
+  const { id, name, role_in_company, company, username, headline, location, tier, 
+          total_events_judged, total_teams_evaluated, total_mentorship_hours, 
+          is_published, display_order } = judge
+  
+  const updateData: any = {}
+  if (name !== undefined) updateData.full_name = name
+  if (role_in_company !== undefined) updateData.role_title = role_in_company
+  if (company !== undefined) updateData.company = company
+  if (username !== undefined) updateData.username = username
+  if (headline !== undefined) updateData.headline = headline
+  if (location !== undefined) updateData.judge_location = location
+  if (tier !== undefined) updateData.tier = tier
+  if (total_events_judged !== undefined) updateData.total_events_judged = total_events_judged
+  if (total_teams_evaluated !== undefined) updateData.total_teams_evaluated = total_teams_evaluated
+  if (total_mentorship_hours !== undefined) updateData.total_mentorship_hours = total_mentorship_hours
+  if (is_published !== undefined) updateData.is_published = is_published
+  if (display_order !== undefined) updateData.display_order = display_order
   
   const { data, error } = await supabase
     .from('judges')
-    .update({
-      ...updateData,
-      updated_at: new Date().toISOString()
-    })
+    .update(updateData)
     .eq('id', id)
     .select('*')
     .single()
 
   if (error) throw error
-  return data
+  
+  return {
+    id: data.id,
+    name: data.full_name,
+    role_in_company: data.role_title,
+    company: data.company,
+    display_order: data.display_order || 0,
+    created_at: data.created_at,
+    updated_at: data.updated_at,
+    username: data.username,
+    headline: data.headline,
+    location: data.judge_location,
+    tier: data.tier,
+    total_events_judged: data.total_events_judged,
+    total_teams_evaluated: data.total_teams_evaluated,
+    total_mentorship_hours: data.total_mentorship_hours,
+    is_published: data.is_published
+  }
 }
 
 // Delete a judge

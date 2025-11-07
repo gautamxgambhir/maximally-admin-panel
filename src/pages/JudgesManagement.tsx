@@ -11,7 +11,10 @@ import {
   Edit,
   Trash2,
   Search,
-  Scale
+  Scale,
+  GripVertical,
+  ArrowUp,
+  ArrowDown
 } from 'lucide-react'
 import { JudgeForm } from '@/components/JudgeForm'
 import {
@@ -36,12 +39,40 @@ export function JudgesManagement() {
   const updateJudge = useUpdateGeneralJudge()
   const deleteJudge = useDeleteGeneralJudge()
 
-  // Filter judges based on search query
-  const filteredJudges = judges.filter(judge =>
-    judge.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    judge.role_in_company.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    judge.company.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  // Filter and sort judges based on search query and display order
+  const filteredJudges = judges
+    .filter(judge =>
+      judge.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      judge.role_in_company.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      judge.company.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+    .sort((a, b) => (a.display_order || 0) - (b.display_order || 0))
+
+  const moveJudge = async (judgeId: number, direction: 'up' | 'down') => {
+    const currentIndex = filteredJudges.findIndex(j => j.id === judgeId)
+    if (currentIndex === -1) return
+    
+    if (direction === 'up' && currentIndex === 0) return
+    if (direction === 'down' && currentIndex === filteredJudges.length - 1) return
+    
+    const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1
+    const currentJudge = filteredJudges[currentIndex]
+    const targetJudge = filteredJudges[targetIndex]
+    
+    // Swap display orders
+    try {
+      await updateJudge.mutateAsync({
+        ...currentJudge,
+        display_order: targetJudge.display_order
+      })
+      await updateJudge.mutateAsync({
+        ...targetJudge,
+        display_order: currentJudge.display_order
+      })
+    } catch (error) {
+      // Error handling is done in the hook
+    }
+  }
 
   const handleCreateJudge = async (data: JudgeInput) => {
     try {
@@ -118,42 +149,117 @@ export function JudgesManagement() {
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Company</TableHead>
-                  <TableHead>Order</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredJudges.map((judge) => (
-                  <TableRow key={judge.id}>
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
-                          <span className="text-xs font-medium text-gray-600">
-                            {judge.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+            <div className="space-y-4">
+              {filteredJudges.map((judge, index) => (
+                <Card key={judge.id} className="overflow-hidden hover:shadow-md transition-shadow">
+                  <CardContent className="p-6">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-start gap-4 flex-1">
+                        {/* Display Order Indicator */}
+                        <div className="flex flex-col items-center justify-center bg-gray-100 rounded px-3 py-2 min-w-[60px]">
+                          <GripVertical className="h-4 w-4 text-gray-400 mb-1" />
+                          <span className="text-sm font-bold text-gray-600">#{judge.display_order || index + 1}</span>
+                        </div>
+                        {/* Profile Picture */}
+                        <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center flex-shrink-0">
+                          <span className="text-lg font-bold text-white">
+                            {judge.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                           </span>
                         </div>
-                        <div>
-                          <div className="font-medium">{judge.name}</div>
+
+                        {/* Judge Details */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-3 mb-2">
+                            <h3 className="text-lg font-semibold text-gray-900">{judge.name}</h3>
+                            {judge.username && (
+                              <Badge variant="outline">@{judge.username}</Badge>
+                            )}
+                            {judge.tier && (
+                              <Badge variant="secondary" className="capitalize">{judge.tier}</Badge>
+                            )}
+                            {judge.is_published && (
+                              <Badge className="bg-green-500">Published</Badge>
+                            )}
+                          </div>
+                          
+                          {judge.headline && (
+                            <p className="text-sm text-gray-600 mb-3">{judge.headline}</p>
+                          )}
+                          
+                          <div className="grid md:grid-cols-3 gap-3 text-sm">
+                            <div>
+                              <span className="text-gray-500">Role:</span>
+                              <span className="ml-2 font-medium text-gray-900">{judge.role_in_company || 'N/A'}</span>
+                            </div>
+                            <div>
+                              <span className="text-gray-500">Company:</span>
+                              <span className="ml-2 font-medium text-gray-900">{judge.company || 'N/A'}</span>
+                            </div>
+                            <div>
+                              <span className="text-gray-500">Location:</span>
+                              <span className="ml-2 font-medium text-gray-900">{judge.location || 'N/A'}</span>
+                            </div>
+                            <div>
+                              <span className="text-gray-500">Events Judged:</span>
+                              <span className="ml-2 font-medium text-gray-900">{judge.total_events_judged || 0}</span>
+                            </div>
+                            <div>
+                              <span className="text-gray-500">Teams Evaluated:</span>
+                              <span className="ml-2 font-medium text-gray-900">{judge.total_teams_evaluated || 0}</span>
+                            </div>
+                            <div>
+                              <span className="text-gray-500">Mentorship Hours:</span>
+                              <span className="ml-2 font-medium text-gray-900">{judge.total_mentorship_hours || 0}</span>
+                            </div>
+                            <div>
+                              <span className="text-gray-500">Display Order:</span>
+                              <span className="ml-2 font-medium text-gray-900">{judge.display_order}</span>
+                            </div>
+                            <div>
+                              <span className="text-gray-500">Created:</span>
+                              <span className="ml-2 font-medium text-gray-900">
+                                {new Date(judge.created_at).toLocaleDateString()}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-gray-500">ID:</span>
+                              <span className="ml-2 font-medium text-gray-900">{judge.id}</span>
+                            </div>
+                          </div>
                         </div>
                       </div>
-                    </TableCell>
-                    <TableCell>{judge.role_in_company}</TableCell>
-                    <TableCell>{judge.company}</TableCell>
-                    <TableCell>{judge.display_order}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
+
+                      {/* Actions */}
+                      <div className="flex items-center gap-2 ml-4">
+                        {/* Sort buttons */}
+                        <div className="flex flex-col gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => moveJudge(judge.id, 'up')}
+                            disabled={filteredJudges.findIndex(j => j.id === judge.id) === 0}
+                            className="h-6 px-2"
+                          >
+                            <ArrowUp className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => moveJudge(judge.id, 'down')}
+                            disabled={filteredJudges.findIndex(j => j.id === judge.id) === filteredJudges.length - 1}
+                            className="h-6 px-2"
+                          >
+                            <ArrowDown className="h-3 w-3" />
+                          </Button>
+                        </div>
+                        
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => setEditingJudge(judge)}
                         >
-                          <Edit className="h-3 w-3" />
+                          <Edit className="h-4 w-4 mr-1" />
+                          Edit
                         </Button>
                         <Button
                           variant="outline"
@@ -161,31 +267,42 @@ export function JudgesManagement() {
                           onClick={() => setDeletingJudge(judge)}
                           className="text-red-600 hover:text-red-700"
                         >
-                          <Trash2 className="h-3 w-3" />
+                          <Trash2 className="h-4 w-4 mr-1" />
+                          Delete
                         </Button>
                       </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {filteredJudges.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center py-8 text-gray-500">
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+              
+              {filteredJudges.length === 0 && (
+                <Card>
+                  <CardContent className="text-center py-12">
+                    <Scale className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-500 mb-2">
                       {searchQuery 
                         ? `No judges found matching "${searchQuery}"`
-                        : 'No judges added yet. Click "Add Judge" to get started.'
+                        : 'No judges added yet.'
                       }
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+                    </p>
+                    {!searchQuery && (
+                      <Button onClick={() => setIsCreateDialogOpen(true)} className="mt-4">
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Your First Judge
+                      </Button>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+            </div>
           )}
         </CardContent>
       </Card>
 
       {/* Create Judge Dialog */}
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-3xl max-h-[90vh]">
           <DialogHeader>
             <DialogTitle>Add New Judge</DialogTitle>
           </DialogHeader>
@@ -199,7 +316,7 @@ export function JudgesManagement() {
 
       {/* Edit Judge Dialog */}
       <Dialog open={!!editingJudge} onOpenChange={() => setEditingJudge(null)}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-3xl max-h-[90vh]">
           <DialogHeader>
             <DialogTitle>Edit Judge</DialogTitle>
           </DialogHeader>

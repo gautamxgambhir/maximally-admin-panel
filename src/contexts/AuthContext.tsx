@@ -29,23 +29,59 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const initializeAuth = async () => {
-      await SessionManager.forceLogoutOnPageLoad()
-      setLoading(false)
-      return
+      try {
+        // Check for existing session first
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (session?.user) {
+          // We have a valid session, check if it's still active
+          if (SessionManager.isSessionActive()) {
+            // Session is active, load user data
+            setUser(session.user);
+            setSession(session);
+            
+            // Get profile and check admin role
+            const { data: profileData } = await getProfile(session.user.id);
+            if (profileData) {
+              setProfile(profileData);
+              const adminStatus = await isUserAdmin(session.user.id);
+              setIsAdmin(adminStatus);
+            }
+          } else {
+            // Session expired, clear it
+            await SessionManager.clearSession();
+          }
+        } else {
+          // No session, clear everything
+          await SessionManager.clearSession();
+        }
+      } catch (error) {
+        console.error('Auth initialization error:', error);
+        await SessionManager.clearSession();
+      } finally {
+        setLoading(false);
+      }
     }
     
-    // Always initialize with forced logout
-    initializeAuth()
+    initializeAuth();
 
-    // Add event listener for browser/tab close to ensure logout
-    const handleBeforeUnload = async () => {
-      await SessionManager.clearSession()
-    }
-    
-    window.addEventListener('beforeunload', handleBeforeUnload)
-    
+    // Listen for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' && session) {
+        setUser(session.user);
+        setSession(session);
+        SessionManager.activateSession();
+      } else if (event === 'SIGNED_OUT') {
+        setUser(null);
+        setSession(null);
+        setProfile(null);
+        setIsAdmin(false);
+        await SessionManager.clearSession();
+      }
+    });
+
     return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload)
+      subscription.unsubscribe();
     }
   }, [])
 

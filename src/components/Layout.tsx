@@ -71,6 +71,11 @@ export function Layout({ children }: LayoutProps) {
       icon: Scale,
     },
     {
+      name: 'Judge Applications',
+      href: '/judge-applications',
+      icon: UserCheck,
+    },
+    {
       name: 'Certificates',
       href: '/certificates',
       icon: Award,

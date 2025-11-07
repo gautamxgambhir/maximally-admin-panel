@@ -47,12 +47,22 @@ export class SessionManager {
 
   // Force logout on page load (ensures no persistent sessions)
   static async forceLogoutOnPageLoad(): Promise<void> {
-    // Always clear session on page load/refresh
-    await this.clearSession()
+    // Check if there's an active session
+    const hasActiveSession = this.isSessionActive();
     
-    // Additional cleanup
-    if (window.history?.replaceState) {
-      window.history.replaceState(null, '', '/login')
+    // Only clear if session is expired or doesn't exist
+    if (!hasActiveSession) {
+      await this.clearSession();
+      
+      // Only redirect to login if we're not already there
+      if (window.location.pathname !== '/login') {
+        if (window.history?.replaceState) {
+          window.history.replaceState(null, '', '/login');
+        }
+      }
+    } else {
+      // Session is active, just update activity
+      this.updateActivity();
     }
   }
 
