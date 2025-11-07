@@ -37,34 +37,37 @@ export interface JudgeUpdate extends Partial<JudgeInput> {
   id: number
 }
 
-// Get all judges - fetch from API instead of direct Supabase query
+// Get all judges - fetch directly from Supabase
 export async function getJudges(): Promise<Judge[]> {
-  const response = await fetch('/api/judges')
-  
-  if (!response.ok) {
-    throw new Error('Failed to fetch judges')
+  const { data, error } = await supabase
+    .from('judges')
+    .select('*')
+    .order('display_order', { ascending: true })
+
+  if (error) {
+    console.error('Error fetching judges:', error)
+    throw error
   }
+
+  console.log('Judges data from Supabase:', data)
   
-  const data = await response.json()
-  console.log('Judges data from API:', data)
-  
-  // Map the API response to the expected interface
-  const mapped = (data || []).map((judge: any, index: number) => ({
+  // Map the Supabase response to the expected interface
+  const mapped = (data || []).map((judge: any) => ({
     id: judge.id,
-    name: judge.fullName || '',
-    role_in_company: judge.currentRole || '',
+    name: judge.full_name || '',
+    role_in_company: judge.role_title || '',
     company: judge.company || '',
-    display_order: index + 1,
-    created_at: judge.createdAt || new Date().toISOString(),
-    updated_at: judge.createdAt || new Date().toISOString(),
+    display_order: judge.display_order || 0,
+    created_at: judge.created_at || new Date().toISOString(),
+    updated_at: judge.updated_at || new Date().toISOString(),
     username: judge.username,
     headline: judge.headline,
-    location: judge.location,
+    location: judge.judge_location,
     tier: judge.tier,
-    total_events_judged: judge.totalEventsJudged || 0,
-    total_teams_evaluated: judge.totalTeamsEvaluated || 0,
-    total_mentorship_hours: judge.totalMentorshipHours || 0,
-    is_published: judge.isPublished
+    total_events_judged: judge.total_events_judged || 0,
+    total_teams_evaluated: judge.total_teams_evaluated || 0,
+    total_mentorship_hours: judge.total_mentorship_hours || 0,
+    is_published: judge.is_published
   }))
   
   console.log('Mapped judges data:', mapped)
