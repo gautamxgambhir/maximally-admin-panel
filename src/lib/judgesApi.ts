@@ -198,12 +198,37 @@ export async function updateJudge(judge: JudgeUpdate): Promise<Judge> {
 
 // Delete a judge
 export async function deleteJudge(id: number): Promise<void> {
-  const { error } = await supabase
+  console.log('🗑️ Attempting to delete judge with ID:', id)
+  console.log('🔑 Using Supabase key:', import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY ? 'Service Role Key' : 'Anon Key')
+  
+  // First check if judge exists
+  const { data: existingJudge, error: checkError } = await supabase
+    .from('judges')
+    .select('id, full_name')
+    .eq('id', id)
+    .single()
+  
+  if (checkError) {
+    console.error('❌ Error checking judge:', checkError)
+    throw new Error(`Judge not found: ${checkError.message}`)
+  }
+  
+  console.log('📋 Found judge to delete:', existingJudge)
+  
+  // Now delete
+  const { data, error } = await supabase
     .from('judges')
     .delete()
     .eq('id', id)
+    .select()
 
-  if (error) throw error
+  if (error) {
+    console.error('❌ Delete error:', error)
+    console.error('❌ Error details:', JSON.stringify(error, null, 2))
+    throw new Error(`Failed to delete judge: ${error.message}`)
+  }
+  
+  console.log('✅ Judge deleted successfully:', data)
 }
 
 

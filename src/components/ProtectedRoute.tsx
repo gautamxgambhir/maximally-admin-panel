@@ -10,22 +10,25 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const { user, isAdmin, loading, roleChecking } = useAuth()
   const location = useLocation()
 
-  if (loading || roleChecking) {
+  // Only show loading on initial load, not when switching tabs
+  if (loading && !user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Card className="w-full max-w-md">
           <CardContent className="p-8 text-center">
             <div className="animate-spin h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p>{roleChecking ? 'Verifying admin access...' : 'Loading...'}</p>
+            <p>Loading...</p>
           </CardContent>
         </Card>
       </div>
     )
   }
 
+  // If not authenticated, redirect to login immediately
   if (!user || !isAdmin) {
     return <Navigate to="/login" state={{ from: location }} replace />
   }
 
+  // User is authenticated and admin, show content
   return <>{children}</>
 }

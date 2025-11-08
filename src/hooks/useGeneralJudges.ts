@@ -109,24 +109,21 @@ export function useDeleteGeneralJudge() {
 
   return useMutation({
     mutationFn: deleteJudge,
-    onSuccess: (_, deletedId) => {
+    onSuccess: async (_, deletedId) => {
+      console.log('✅ Delete mutation success for ID:', deletedId)
+      
       // Remove from all relevant queries
       queryClient.removeQueries({ queryKey: generalJudgesKeys.detail(deletedId) })
       
-      // Update list queries
-      queryClient.setQueriesData(
-        { queryKey: generalJudgesKeys.lists() },
-        (oldData: Judge[] | undefined) => {
-          if (!oldData) return []
-          return oldData.filter(judge => judge.id !== deletedId)
-        }
-      )
-
-      queryClient.invalidateQueries({ queryKey: generalJudgesKeys.count() })
+      // Invalidate and refetch all judges data
+      await queryClient.invalidateQueries({ queryKey: generalJudgesKeys.all })
+      await queryClient.refetchQueries({ queryKey: generalJudgesKeys.list() })
+      
       toast.success('Judge deleted successfully!')
     },
-    onError: (error) => {
-      toast.error('Failed to delete judge. Please try again.')
+    onError: (error: any) => {
+      console.error('❌ Delete mutation error:', error)
+      toast.error(`Failed to delete judge: ${error.message || 'Please try again.'}`)
     },
   })
 }

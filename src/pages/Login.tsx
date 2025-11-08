@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Navigate } from 'react-router-dom'
+import { Navigate, useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -18,7 +18,8 @@ const loginSchema = z.object({
 type LoginForm = z.infer<typeof loginSchema>
 
 export function Login() {
-  const { user, signIn } = useAuth()
+  const { user, isAdmin, signIn } = useAuth()
+  const navigate = useNavigate()
   const [isLoading, setIsLoading] = useState(false)
   
   const {
@@ -29,18 +30,30 @@ export function Login() {
     resolver: zodResolver(loginSchema),
   })
 
-  if (user) {
+  // If already logged in as admin, redirect to dashboard
+  if (user && isAdmin) {
     return <Navigate to="/dashboard" replace />
   }
 
   const onSubmit = async (data: LoginForm) => {
     setIsLoading(true)
     try {
+      console.log('📝 Submitting login form...')
       const { error } = await signIn(data.email, data.password)
+      
       if (error) {
+        console.error('❌ Login error:', error)
         toast.error(error.message || 'Failed to sign in')
+      } else {
+        console.log('✅ Login successful, navigating to dashboard...')
+        toast.success('Signed in successfully!')
+        // Give a small delay for state to update
+        setTimeout(() => {
+          navigate('/dashboard', { replace: true })
+        }, 100)
       }
     } catch (error: any) {
+      console.error('❌ Unexpected login error:', error)
       toast.error(error.message || 'An unexpected error occurred')
     } finally {
       setIsLoading(false)

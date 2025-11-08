@@ -11,6 +11,7 @@ import { AdminManagement } from './pages/AdminManagement'
 import { PeopleManagement } from './pages/PeopleManagement'
 import { JudgesManagement } from './pages/JudgesManagement'
 import JudgeApplications from './pages/JudgeApplications'
+import JudgeInbox from './pages/JudgeInbox'
 import { Certificates } from './pages/Certificates'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { Layout } from './components/Layout'
@@ -19,7 +20,7 @@ function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      <Route path="/" element={<Navigate to="/login" replace />} />
       <Route
         path="/dashboard"
         element={
@@ -126,6 +127,16 @@ function App() {
           <ProtectedRoute>
             <Layout>
               <JudgeApplications />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/judge-inbox"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <JudgeInbox />
             </Layout>
           </ProtectedRoute>
         }

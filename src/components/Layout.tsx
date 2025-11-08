@@ -11,7 +11,8 @@ import {
   Users,
   UserCheck,
   Scale,
-  Award
+  Award,
+  Mail
 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -74,6 +75,11 @@ export function Layout({ children }: LayoutProps) {
       name: 'Judge Applications',
       href: '/judge-applications',
       icon: UserCheck,
+    },
+    {
+      name: 'Judge Inbox',
+      href: '/judge-inbox',
+      icon: Mail,
     },
     {
       name: 'Certificates',
