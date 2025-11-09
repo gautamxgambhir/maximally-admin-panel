@@ -207,7 +207,7 @@ export async function deleteJudge(id: number): Promise<void> {
   }
 
   // Call server endpoint which has service role access
-  const response = await fetch(`http://localhost:5002/api/admin/judges/${id}`, {
+  const response = await fetch(`http://maximally.in/api/admin/judges/${id}`, {
     method: 'DELETE',
     headers: {
       'Authorization': `Bearer ${session.access_token}`,

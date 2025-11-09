@@ -36,16 +36,18 @@ export function Login() {
   }
 
   const onSubmit = async (data: LoginForm) => {
+    console.log('🚀 Login form submitted')
     setIsLoading(true)
     try {
-      
+      console.log('📞 Calling signIn...')
       const { error } = await signIn(data.email, data.password)
+      console.log('📞 signIn returned:', { error })
       
       if (error) {
-        
+        console.error('❌ Sign in failed:', error)
         toast.error(error.message || 'Failed to sign in')
       } else {
-        
+        console.log('✅ Sign in successful')
         toast.success('Signed in successfully!')
         // Give a small delay for state to update
         setTimeout(() => {
@@ -53,9 +55,10 @@ export function Login() {
         }, 100)
       }
     } catch (error: any) {
-      
+      console.error('💥 Exception in onSubmit:', error)
       toast.error(error.message || 'An unexpected error occurred')
     } finally {
+      console.log('🏁 Setting isLoading to false')
       setIsLoading(false)
     }
   }

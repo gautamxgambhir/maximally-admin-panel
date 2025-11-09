@@ -133,41 +133,55 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const signIn = async (email: string, password: string) => {
+    console.log('🔐 signIn called with email:', email)
     try {
-      
       setLoading(true)
+      console.log('⏳ Loading set to true')
       
-      const result = await supabase.auth.signInWithPassword({ email, password })
+      // Add timeout to prevent hanging forever
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Sign in request timed out after 10 seconds')), 10000)
+      )
+      
+      const signInPromise = supabase.auth.signInWithPassword({ email, password })
+      
+      const result = await Promise.race([signInPromise, timeoutPromise]) as any
+      console.log('📡 Auth result:', result)
       
       if (result.error) {
-        
+        console.error('❌ Auth error:', result.error)
+        setLoading(false)
         return { error: result.error }
       }
       
       if (!result.data.user) {
-        
+        console.error('❌ No user data returned')
+        setLoading(false)
         return { error: { message: 'No user data returned' } }
       }
       
-      
+      console.log('👤 User authenticated:', result.data.user.id)
       
       // Verify admin role immediately
+      console.log('🔍 Fetching profile for user:', result.data.user.id)
       const { data: profileData, error: profileError } = await getProfile(result.data.user.id)
+      console.log('📋 Profile result:', { profileData, profileError })
       
       if (profileError) {
-        
+        console.error('❌ Profile fetch error:', profileError)
         await supabase.auth.signOut()
+        setLoading(false)
         return { error: { message: 'Failed to fetch profile' } }
       }
       
       if (!profileData || profileData.role !== 'admin') {
-        
+        console.error('❌ Not admin. Profile:', profileData)
         await supabase.auth.signOut()
+        setLoading(false)
         return { error: { message: 'Access denied. Admin role required.' } }
       }
       
-      
-      
+      console.log('✅ Admin verified, setting states')
       // User is admin - activate session and set states
       SessionManager.activateSession()
       setUser(result.data.user)
@@ -175,12 +189,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setProfile(profileData)
       setIsAdmin(true)
       setLoading(false)
-      
-      
+      console.log('✅ Sign in complete')
       
       return { error: null }
     } catch (error: any) {
-      
+      console.error('💥 Unexpected error in signIn:', error)
+      setLoading(false)
       return { error: { message: error.message || 'Unexpected error' } }
     }
   }
