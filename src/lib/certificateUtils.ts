@@ -661,11 +661,11 @@ export async function uploadCertificateFiles(
     .createSignedUrl(jpgFileName, 31536000) // 1 year expiry
 
   if (pdfUrlError) {
-    console.warn('Failed to create signed URL for PDF:', pdfUrlError)
+    
   }
   
   if (jpgUrlError) {
-    console.warn('Failed to create signed URL for JPG:', jpgUrlError)
+    
   }
 
   return {
@@ -688,7 +688,7 @@ export async function createCertificateZip(certificates: Array<{
   let errorCount = 0
   const errors: string[] = []
   
-  console.log(`Creating ZIP for ${certificates.length} certificates`)
+  
 
   for (const cert of certificates) {
     let certSuccessCount = 0
@@ -697,7 +697,7 @@ export async function createCertificateZip(certificates: Array<{
     try {
       // Download PDF if available
       if (cert.pdf_url) {
-        console.log(`Downloading PDF for ${cert.certificate_id} from:`, cert.pdf_url)
+        
         try {
           const pdfResponse = await fetch(cert.pdf_url, {
             method: 'GET',
@@ -706,13 +706,12 @@ export async function createCertificateZip(certificates: Array<{
             }
           })
           
-          console.log(`PDF response for ${cert.certificate_id}:`, pdfResponse.status, pdfResponse.statusText)
+          
           
           if (pdfResponse.ok) {
             const pdfBlob = await pdfResponse.blob()
             const filename = `${cert.certificate_id}_${cert.participant_name.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`
             zip.file(filename, pdfBlob)
-            console.log(`Added PDF to ZIP: ${filename} (${pdfBlob.size} bytes)`)
             certSuccessCount++
           } else {
             const errorMsg = `PDF download failed: ${pdfResponse.status} ${pdfResponse.statusText}`
@@ -725,13 +724,13 @@ export async function createCertificateZip(certificates: Array<{
           certErrors.push(`PDF: ${errorMsg}`)
         }
       } else {
-        console.log(`No PDF URL for certificate ${cert.certificate_id}`)
+        
         certErrors.push('PDF: No URL available')
       }
 
       // Download JPG if available
       if (cert.jpg_url) {
-        console.log(`Downloading JPG for ${cert.certificate_id} from:`, cert.jpg_url)
+        
         try {
           const jpgResponse = await fetch(cert.jpg_url, {
             method: 'GET',
@@ -740,13 +739,12 @@ export async function createCertificateZip(certificates: Array<{
             }
           })
           
-          console.log(`JPG response for ${cert.certificate_id}:`, jpgResponse.status, jpgResponse.statusText)
+          
           
           if (jpgResponse.ok) {
             const jpgBlob = await jpgResponse.blob()
             const filename = `${cert.certificate_id}_${cert.participant_name.replace(/[^a-zA-Z0-9]/g, '_')}.jpg`
             zip.file(filename, jpgBlob)
-            console.log(`Added JPG to ZIP: ${filename} (${jpgBlob.size} bytes)`)
             certSuccessCount++
           } else {
             const errorMsg = `JPG download failed: ${jpgResponse.status} ${jpgResponse.statusText}`
@@ -759,7 +757,7 @@ export async function createCertificateZip(certificates: Array<{
           certErrors.push(`JPG: ${errorMsg}`)
         }
       } else {
-        console.log(`No JPG URL for certificate ${cert.certificate_id}`)
+        
         certErrors.push('JPG: No URL available')
       }
       
@@ -789,7 +787,7 @@ export async function createCertificateZip(certificates: Array<{
     
   zip.file('DOWNLOAD_SUMMARY.txt', summary)
   
-  console.log(`ZIP creation complete. Success: ${successCount}, Errors: ${errorCount}`)
+  
   
   return zip.generateAsync({ type: 'blob' })
 }

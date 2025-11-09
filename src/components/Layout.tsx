@@ -82,6 +82,11 @@ export function Layout({ children }: LayoutProps) {
       icon: Mail,
     },
     {
+      name: 'Judge Events Verification',
+      href: '/judge-events-verification',
+      icon: UserCheck,
+    },
+    {
       name: 'Certificates',
       href: '/certificates',
       icon: Award,

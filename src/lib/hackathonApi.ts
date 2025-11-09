@@ -170,7 +170,7 @@ export async function updateHackathonSortOrders(updates: { id: number; sort_orde
   
   if (error) {
     // Fallback to individual updates if RPC function doesn't exist
-    console.warn('RPC function not available, falling back to individual updates')
+    
     for (const update of updates) {
       await supabase
         .from('hackathons')

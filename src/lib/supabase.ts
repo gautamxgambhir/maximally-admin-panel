@@ -10,26 +10,25 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIU
 // Use service role key if available (for admin operations), otherwise fall back to anon key
 const supabaseKey = supabaseServiceKey || supabaseAnonKey
 
-console.log('🔧 Supabase Configuration:')
-console.log('  URL:', supabaseUrl)
-console.log('  Using Service Role Key:', !!supabaseServiceKey)
-console.log('  Key preview:', supabaseKey.substring(0, 20) + '...')
-
 if (!supabaseUrl || !supabaseKey) {
   throw new Error('Missing Supabase environment variables')
 }
 
-// Create client with service role key to bypass RLS for admin operations
+// Create client with proper auth configuration
+// For admin operations, we use service role key which bypasses RLS
+// But we still need proper session management for the admin user
 export const supabase = createClient(supabaseUrl, supabaseKey, {
   auth: {
-    autoRefreshToken: false,
-    persistSession: false
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: true,
+    storage: window.localStorage
   }
 })
 
 // Log which key is being used
 if (supabaseServiceKey) {
-  console.log('✅ Admin panel using SERVICE ROLE KEY - RLS bypassed')
+  
 } else {
-  console.warn('⚠️ Admin panel using ANON KEY - RLS policies will apply')
+  
 }

@@ -11,14 +11,19 @@ export interface ProfileApiResult<T = any> {
  */
 export async function getProfile(userId: string): Promise<ProfileApiResult<Profile>> {
   try {
+    
+    
     const { data, error } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', userId)
       .maybeSingle()
 
+    
+
     return { data, error }
   } catch (error) {
+    
     return { data: null, error }
   }
 }
@@ -174,13 +179,13 @@ export async function removeAdminRole(userId: string): Promise<ProfileApiResult<
  */
 export async function toggleAdminRole(email: string): Promise<ProfileApiResult<{ profile: Profile; isNowAdmin: boolean }>> {
   try {
-    console.log('🔍 Toggling admin role for:', email)
+    
     
     // First get the current profile
     const { data: profile, error: getError } = await getProfileByEmail(email)
     
-    console.log('📋 Current profile:', profile)
-    console.log('❌ Get error:', getError)
+    
+    
     
     if (getError) {
       return { data: null, error: getError }
@@ -193,7 +198,7 @@ export async function toggleAdminRole(email: string): Promise<ProfileApiResult<{
     // Toggle the role
     const newRole: UserRole = profile.role === 'admin' ? 'user' : 'admin'
     
-    console.log('🔄 Changing role from', profile.role, 'to', newRole)
+    
     
     // Try direct update instead of using updateUserRole
     const { data: updateResult, error: updateError } = await supabase
@@ -203,8 +208,8 @@ export async function toggleAdminRole(email: string): Promise<ProfileApiResult<{
       .select()
       .single()
     
-    console.log('✏️ Update result:', updateResult)
-    console.log('❌ Update error:', updateError)
+    
+    
     
     if (updateError) {
       console.error('Update failed with error:', updateError)
@@ -216,7 +221,7 @@ export async function toggleAdminRole(email: string): Promise<ProfileApiResult<{
       return { data: null, error: { message: 'Update failed - no data returned' } }
     }
 
-    console.log('✅ Successfully updated profile:', updateResult)
+    
 
     return { 
       data: { 

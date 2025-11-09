@@ -211,7 +211,7 @@ export function JudgesManagement() {
 
     if (over && active.id !== over.id) {
       // Just log for now since we don't have display_order in DB
-      console.log('Drag reorder:', active.id, 'to', over.id)
+      
       // The visual order will reset on refetch since we don't persist it
     }
   }
@@ -240,13 +240,13 @@ export function JudgesManagement() {
     if (!deletingJudge) return
     
     try {
-      console.log('🗑️ Deleting judge:', deletingJudge.name, 'ID:', deletingJudge.id)
+      
       await deleteJudge.mutateAsync(deletingJudge.id)
-      console.log('✅ Delete completed, refetching judges...')
+      
       await refetch()
       setDeletingJudge(null)
     } catch (error: any) {
-      console.error('❌ Delete failed:', error)
+      
       // Error handling is done in the hook with toast notifications
     }
   }

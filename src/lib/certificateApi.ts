@@ -35,7 +35,7 @@ export async function createCertificate(data: CreateCertificateData): Promise<Ce
     .single()
     
   if (profileError) {
-    console.warn('Failed to fetch user profile:', profileError)
+    
   }
 
   // Generate unique certificate ID
@@ -117,7 +117,7 @@ export async function createBulkCertificates(
   }
 
   if (errors.length > 0) {
-    console.warn('Some certificates failed to create:', errors)
+    
   }
 
   return results
@@ -141,7 +141,7 @@ export async function createCertificateWithBatch(data: CreateCertificateData & {
     .single()
     
   if (profileError) {
-    console.warn('Failed to fetch user profile:', profileError)
+    
   }
 
   // Generate unique certificate ID
@@ -336,7 +336,7 @@ export async function deleteCertificate(id: string): Promise<void> {
         filesToDelete.push(pdfPath)
       }
     } catch (error) {
-      console.warn('Failed to parse PDF URL for deletion:', error)
+      
     }
   }
   
@@ -363,7 +363,7 @@ export async function deleteCertificate(id: string): Promise<void> {
         filesToDelete.push(jpgPath)
       }
     } catch (error) {
-      console.warn('Failed to parse JPG URL for deletion:', error)
+      
     }
   }
 
@@ -375,7 +375,7 @@ export async function deleteCertificate(id: string): Promise<void> {
 
   // Delete files from storage if any were found
   if (uniquePaths.length > 0) {
-    console.log('Attempting to delete files from storage:', uniquePaths)
+    
     
     const { data: deletedFiles, error: storageError } = await supabase.storage
       .from('certificates')
@@ -384,12 +384,12 @@ export async function deleteCertificate(id: string): Promise<void> {
     if (storageError) {
       console.error('Failed to delete files from storage:', storageError)
       // Don't throw error here - we still want to delete the database record
-      console.warn('Continuing with database deletion despite storage error')
+      
     } else {
-      console.log('Successfully deleted files from storage:', deletedFiles)
+      
     }
   } else {
-    console.log('No files to delete from storage for certificate:', certificate.certificate_id)
+    
   }
 
   // Delete certificate record

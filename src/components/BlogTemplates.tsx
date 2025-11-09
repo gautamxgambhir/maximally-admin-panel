@@ -35,7 +35,7 @@ Detailed explanation of the first step.
 
 \`\`\`javascript
 // Code example if applicable
-console.log('Hello World');
+
 \`\`\`
 
 ## Step 2: [Second Step Title]

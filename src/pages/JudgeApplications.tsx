@@ -117,7 +117,7 @@ const JudgeApplications = () => {
     queryKey: ['judge-applications'],
     queryFn: async () => {
       try {
-        console.log('📋 Fetching judge applications from Supabase...');
+        
 
         const { data, error } = await supabase
           .from('judge_applications')
@@ -128,14 +128,14 @@ const JudgeApplications = () => {
           .order('created_at', { ascending: false });
 
         if (error) {
-          console.error('❌ Supabase error:', error);
+          
           throw new Error(error.message);
         }
 
-        console.log('✅ Fetched applications:', data?.length || 0);
+        
         return (data || []) as JudgeApplication[];
       } catch (error) {
-        console.error('❌ Error fetching applications:', error);
+        
         throw error;
       }
     },
@@ -143,34 +143,35 @@ const JudgeApplications = () => {
     staleTime: 30000
   });
 
-  // Approve application mutation - use database function
+  // Approve application mutation - use database function with proper error handling
   const approveApplication = useMutation({
     mutationFn: async ({ id, tier }: { id: string; tier: string }) => {
-      console.log('✅ Approving application:', id, 'with tier:', tier);
+      
+      
+      const applicationId = parseInt(id, 10);
       
       // Use the database function for atomic approval
       const { data, error } = await supabase.rpc('approve_judge_application', {
-        application_id_param: parseInt(id, 10),
+        application_id_param: applicationId,
         tier_param: tier
       });
 
       if (error) {
-        console.error('❌ Error approving application:', error);
         throw new Error(error.message);
       }
       
-      console.log('✅ Application approved successfully:', data);
+      
       return data;
     },
     onSuccess: async () => {
-      console.log('✅ Approve successful, refetching...');
+      
       await queryClient.invalidateQueries({ queryKey: ['judge-applications'] });
       await queryClient.refetchQueries({ queryKey: ['judge-applications'] });
       toast.success('Application approved successfully!');
       setSelectedApplication(null);
     },
     onError: (error: Error) => {
-      console.error('❌ Approve error:', error);
+      
       toast.error(`Failed to approve: ${error.message}`);
     }
   });
@@ -178,7 +179,7 @@ const JudgeApplications = () => {
   // Reject application mutation - use database function
   const rejectApplication = useMutation({
     mutationFn: async ({ id, reason }: { id: string; reason: string }) => {
-      console.log('❌ Rejecting application:', id);
+      
       
       // Use the database function for rejection
       const { data, error } = await supabase.rpc('reject_judge_application', {
@@ -187,11 +188,11 @@ const JudgeApplications = () => {
       });
 
       if (error) {
-        console.error('❌ Error rejecting application:', error);
+        
         throw new Error(error.message);
       }
 
-      console.log('✅ Application rejected successfully:', data);
+      
       return data;
     },
     onSuccess: () => {
@@ -201,7 +202,7 @@ const JudgeApplications = () => {
       setRejectionReason('');
     },
     onError: (error: Error) => {
-      console.error('❌ Reject error:', error);
+      
       toast.error(error.message);
     }
   });
@@ -209,7 +210,7 @@ const JudgeApplications = () => {
   // Delete application mutation - use database function
   const deleteApplication = useMutation({
     mutationFn: async (id: string) => {
-      console.log('🗑️ Deleting application:', id);
+      
       
       // Use the database function for deletion
       const { data, error } = await supabase.rpc('delete_judge_application', {
@@ -217,21 +218,21 @@ const JudgeApplications = () => {
       });
 
       if (error) {
-        console.error('❌ Error deleting application:', error);
+        
         throw new Error(error.message);
       }
 
-      console.log('✅ Application deleted successfully:', data);
+      
       return data;
     },
     onSuccess: async () => {
-      console.log('✅ Delete successful, refetching applications...');
+      
       await queryClient.invalidateQueries({ queryKey: ['judge-applications'] });
       await queryClient.refetchQueries({ queryKey: ['judge-applications'] });
       toast.success('Application deleted successfully');
     },
     onError: (error: Error) => {
-      console.error('❌ Delete mutation error:', error);
+      
       toast.error(`Failed to delete: ${error.message}`);
     }
   });

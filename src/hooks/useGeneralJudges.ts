@@ -110,7 +110,7 @@ export function useDeleteGeneralJudge() {
   return useMutation({
     mutationFn: deleteJudge,
     onSuccess: async (_, deletedId) => {
-      console.log('✅ Delete mutation success for ID:', deletedId)
+      
       
       // Remove from all relevant queries
       queryClient.removeQueries({ queryKey: generalJudgesKeys.detail(deletedId) })
@@ -122,7 +122,7 @@ export function useDeleteGeneralJudge() {
       toast.success('Judge deleted successfully!')
     },
     onError: (error: any) => {
-      console.error('❌ Delete mutation error:', error)
+      
       toast.error(`Failed to delete judge: ${error.message || 'Please try again.'}`)
     },
   })

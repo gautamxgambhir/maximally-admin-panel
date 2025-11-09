@@ -12,6 +12,7 @@ import { PeopleManagement } from './pages/PeopleManagement'
 import { JudgesManagement } from './pages/JudgesManagement'
 import JudgeApplications from './pages/JudgeApplications'
 import JudgeInbox from './pages/JudgeInbox'
+import { JudgeEventsVerification } from './pages/JudgeEventsVerification'
 import { Certificates } from './pages/Certificates'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { Layout } from './components/Layout'
@@ -137,6 +138,16 @@ function App() {
           <ProtectedRoute>
             <Layout>
               <JudgeInbox />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/judge-events-verification"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <JudgeEventsVerification />
             </Layout>
           </ProtectedRoute>
         }

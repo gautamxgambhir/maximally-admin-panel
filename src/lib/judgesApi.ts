@@ -49,8 +49,8 @@ export async function getJudges(): Promise<Judge[]> {
     throw error
   }
 
-  console.log('Judges data from Supabase:', data)
-  
+
+
   // Map the Supabase response to the expected interface
   const mapped = (data || []).map((judge: any, index: number) => ({
     id: judge.id,
@@ -69,8 +69,8 @@ export async function getJudges(): Promise<Judge[]> {
     total_mentorship_hours: judge.total_mentorship_hours || 0,
     is_published: judge.is_published
   }))
-  
-  console.log('Mapped judges data:', mapped)
+
+
   return mapped
 }
 
@@ -85,7 +85,7 @@ export async function getJudge(id: number): Promise<Judge | null> {
 
   if (error) throw error
   if (!data) return null
-  
+
   return {
     id: data.id,
     name: data.full_name || '',
@@ -116,7 +116,7 @@ export async function createJudge(judge: JudgeInput): Promise<Judge> {
     email: `${judge.username || judge.name.toLowerCase().replace(/\s+/g, '_')}@example.com`,
     agreed_to_nda: true
   }
-  
+
   if (judge.total_events_judged !== undefined) insertData.total_events_judged = judge.total_events_judged
   if (judge.total_teams_evaluated !== undefined) insertData.total_teams_evaluated = judge.total_teams_evaluated
   if (judge.total_mentorship_hours !== undefined) insertData.total_mentorship_hours = judge.total_mentorship_hours
@@ -128,7 +128,7 @@ export async function createJudge(judge: JudgeInput): Promise<Judge> {
     .single()
 
   if (error) throw error
-  
+
   return {
     id: data.id,
     name: data.full_name,
@@ -150,10 +150,10 @@ export async function createJudge(judge: JudgeInput): Promise<Judge> {
 
 // Update an existing judge
 export async function updateJudge(judge: JudgeUpdate): Promise<Judge> {
-  const { id, name, role_in_company, company, username, headline, location, tier, 
-          total_events_judged, total_teams_evaluated, total_mentorship_hours, 
-          is_published } = judge
-  
+  const { id, name, role_in_company, company, username, headline, location, tier,
+    total_events_judged, total_teams_evaluated, total_mentorship_hours,
+    is_published } = judge
+
   const updateData: any = {}
   if (name !== undefined) updateData.full_name = name
   if (role_in_company !== undefined) updateData.role_title = role_in_company
@@ -167,7 +167,7 @@ export async function updateJudge(judge: JudgeUpdate): Promise<Judge> {
   if (total_mentorship_hours !== undefined) updateData.total_mentorship_hours = total_mentorship_hours
   if (is_published !== undefined) updateData.is_published = is_published
   // Note: display_order doesn't exist in the judges table
-  
+
   const { data, error } = await supabase
     .from('judges')
     .update(updateData)
@@ -176,7 +176,7 @@ export async function updateJudge(judge: JudgeUpdate): Promise<Judge> {
     .single()
 
   if (error) throw error
-  
+
   return {
     id: data.id,
     name: data.full_name,
@@ -196,39 +196,32 @@ export async function updateJudge(judge: JudgeUpdate): Promise<Judge> {
   }
 }
 
-// Delete a judge
+// Delete a judge via server API endpoint (uses service role on server side)
 export async function deleteJudge(id: number): Promise<void> {
-  console.log('🗑️ Attempting to delete judge with ID:', id)
-  console.log('🔑 Using Supabase key:', import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY ? 'Service Role Key' : 'Anon Key')
-  
-  // First check if judge exists
-  const { data: existingJudge, error: checkError } = await supabase
-    .from('judges')
-    .select('id, full_name')
-    .eq('id', id)
-    .single()
-  
-  if (checkError) {
-    console.error('❌ Error checking judge:', checkError)
-    throw new Error(`Judge not found: ${checkError.message}`)
-  }
-  
-  console.log('📋 Found judge to delete:', existingJudge)
-  
-  // Now delete
-  const { data, error } = await supabase
-    .from('judges')
-    .delete()
-    .eq('id', id)
-    .select()
 
-  if (error) {
-    console.error('❌ Delete error:', error)
-    console.error('❌ Error details:', JSON.stringify(error, null, 2))
-    throw new Error(`Failed to delete judge: ${error.message}`)
+
+  // Get auth token
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session) {
+    throw new Error('Not authenticated')
   }
-  
-  console.log('✅ Judge deleted successfully:', data)
+
+  // Call server endpoint which has service role access
+  const response = await fetch(`http://localhost:5002/api/admin/judges/${id}`, {
+    method: 'DELETE',
+    headers: {
+      'Authorization': `Bearer ${session.access_token}`,
+      'Content-Type': 'application/json'
+    }
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.message || 'Failed to delete judge')
+  }
+
+  const result = await response.json()
+
 }
 
 
@@ -237,7 +230,7 @@ export async function deleteJudge(id: number): Promise<void> {
 export async function reorderJudges(updates: { id: number; display_order: number }[]): Promise<void> {
   // Since display_order doesn't exist in the judges table, this is a no-op
   // The order is managed in the UI state only
-  console.log('Reorder requested but display_order column does not exist in judges table')
+
   return Promise.resolve()
 }
 

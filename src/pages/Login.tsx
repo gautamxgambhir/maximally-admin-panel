@@ -38,14 +38,14 @@ export function Login() {
   const onSubmit = async (data: LoginForm) => {
     setIsLoading(true)
     try {
-      console.log('📝 Submitting login form...')
+      
       const { error } = await signIn(data.email, data.password)
       
       if (error) {
-        console.error('❌ Login error:', error)
+        
         toast.error(error.message || 'Failed to sign in')
       } else {
-        console.log('✅ Login successful, navigating to dashboard...')
+        
         toast.success('Signed in successfully!')
         // Give a small delay for state to update
         setTimeout(() => {
@@ -53,7 +53,7 @@ export function Login() {
         }, 100)
       }
     } catch (error: any) {
-      console.error('❌ Unexpected login error:', error)
+      
       toast.error(error.message || 'An unexpected error occurred')
     } finally {
       setIsLoading(false)

@@ -35,17 +35,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Set a timeout to prevent infinite loading
       timeoutId = setTimeout(() => {
         if (mounted) {
-          console.warn('⚠️ Auth initialization timeout - forcing completion')
+          
           setLoading(false)
           setRoleChecking(false)
         }
       }, 5000) // 5 second timeout
       
       try {
-        console.log('🔐 Initializing auth...')
+        
         
         // Always start fresh - no persistent sessions
-        console.log('📄 Clearing all sessions on init')
+        
         
         // Clear Supabase session
         await supabase.auth.signOut()
@@ -63,7 +63,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setRoleChecking(false)
         }
       } catch (error) {
-        console.error('❌ Auth initialization error:', error)
+        
         if (mounted) {
           setUser(null)
           setSession(null)
@@ -81,12 +81,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('🔄 Auth state changed:', event)
+      
       
       if (!mounted) return
       
       if (event === 'SIGNED_IN' && session) {
-        console.log('✅ User signed in:', session.user.email)
+        
         setUser(session.user)
         setSession(session)
         SessionManager.activateSession()
@@ -97,25 +97,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const { data: profileData, error: profileError } = await getProfile(session.user.id)
           
           if (profileError || !profileData || profileData.role !== 'admin') {
-            console.error('❌ Not an admin')
+            
             await supabase.auth.signOut()
             setUser(null)
             setSession(null)
             setProfile(null)
             setIsAdmin(false)
           } else {
-            console.log('✅ Admin verified')
+            
             setProfile(profileData)
             setIsAdmin(true)
           }
         } catch (error) {
-          console.error('❌ Error checking admin:', error)
+          
           await supabase.auth.signOut()
         } finally {
           setRoleChecking(false)
         }
       } else if (event === 'SIGNED_OUT') {
-        console.log('👋 User signed out')
+        
         setUser(null)
         setSession(null)
         setProfile(null)
@@ -134,39 +134,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     try {
-      console.log('🔐 Attempting sign in for:', email)
+      
       setLoading(true)
       
       const result = await supabase.auth.signInWithPassword({ email, password })
       
       if (result.error) {
-        console.error('❌ Sign in error:', result.error)
+        
         return { error: result.error }
       }
       
       if (!result.data.user) {
-        console.error('❌ No user data returned')
+        
         return { error: { message: 'No user data returned' } }
       }
       
-      console.log('✅ Sign in successful, checking admin role...')
+      
       
       // Verify admin role immediately
       const { data: profileData, error: profileError } = await getProfile(result.data.user.id)
       
       if (profileError) {
-        console.error('❌ Profile fetch error:', profileError)
+        
         await supabase.auth.signOut()
         return { error: { message: 'Failed to fetch profile' } }
       }
       
       if (!profileData || profileData.role !== 'admin') {
-        console.error('❌ Not an admin. Role:', profileData?.role)
+        
         await supabase.auth.signOut()
         return { error: { message: 'Access denied. Admin role required.' } }
       }
       
-      console.log('✅ Admin verified, setting auth state...')
+      
       
       // User is admin - activate session and set states
       SessionManager.activateSession()
@@ -176,11 +176,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setIsAdmin(true)
       setLoading(false)
       
-      console.log('✅ Auth state set successfully')
+      
       
       return { error: null }
     } catch (error: any) {
-      console.error('❌ Unexpected sign in error:', error)
+      
       return { error: { message: error.message || 'Unexpected error' } }
     }
   }
