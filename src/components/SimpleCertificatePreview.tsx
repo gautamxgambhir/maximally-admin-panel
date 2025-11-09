@@ -116,7 +116,7 @@ export function SimpleCertificatePreview({
 
         <div className="space-y-4">
           {/* Certificate Details Summary */}
-          <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg text-sm">
+          <div className="grid grid-cols-2 gap-4 p-4 bg-muted rounded-lg text-sm">
             <div>
               <span className="font-medium">Participant:</span> {data.participant_name || 'Not specified'}
             </div>
@@ -139,18 +139,18 @@ export function SimpleCertificatePreview({
             </div>
           </div>
 
-          {/* Certificate Preview */}
-          <div className="border rounded-lg bg-white min-h-[400px]">
+          {/* Certificate Preview - Always white background */}
+          <div className="border rounded-lg bg-white dark:bg-white min-h-[400px]">
             {isLoading ? (
               <div className="flex items-center justify-center h-96">
                 <div className="text-center">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                  <p className="text-gray-600">Generating preview...</p>
+                  <p className="text-gray-600 dark:text-gray-700">Generating preview...</p>
                 </div>
               </div>
             ) : !isFormValid ? (
               <div className="flex items-center justify-center h-96">
-                <div className="text-center text-gray-500">
+                <div className="text-center text-gray-500 dark:text-gray-600">
                   <Eye className="h-12 w-12 mx-auto mb-4 opacity-50" />
                   <p className="text-lg font-medium">Preview Not Available</p>
                   <p className="text-sm">Please fill in all required fields to see the preview</p>
@@ -171,7 +171,7 @@ export function SimpleCertificatePreview({
               </div>
             ) : (
               <div className="flex items-center justify-center h-96">
-                <div className="text-center text-gray-500">
+                <div className="text-center text-gray-500 dark:text-gray-600">
                   <p className="text-lg font-medium">Failed to generate preview</p>
                   <p className="text-sm">Please check your form data and try again</p>
                 </div>
@@ -180,7 +180,7 @@ export function SimpleCertificatePreview({
           </div>
 
           {/* Preview Notes */}
-          <div className="text-xs text-gray-600 bg-blue-50 p-3 rounded-lg">
+          <div className="text-xs text-muted-foreground bg-blue-50 dark:bg-blue-950/30 p-3 rounded-lg">
             <p className="font-medium mb-1">Preview Notes:</p>
             <ul className="list-disc list-inside space-y-1">
               <li>This is a scaled-down preview. The actual certificate will be high-resolution.</li>

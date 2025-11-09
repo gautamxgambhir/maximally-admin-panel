@@ -130,7 +130,7 @@ export function JudgeEventsVerification() {
             <div className="flex items-center gap-3 mb-3">
               <h3 className="text-lg font-semibold">{event.event_name}</h3>
               {event.verified ? (
-                <Badge className="bg-green-500">
+                <Badge className="bg-green-600 dark:bg-green-700">
                   <CheckCircle className="h-3 w-3 mr-1" />
                   Verified
                 </Badge>
@@ -143,25 +143,25 @@ export function JudgeEventsVerification() {
             </div>
 
             <div className="grid md:grid-cols-2 gap-4 mb-4">
-              <div className="flex items-center gap-2 text-sm text-gray-600">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <User className="h-4 w-4" />
                 <div>
-                  <span className="font-medium">{event.judge.full_name}</span>
-                  <span className="text-gray-400 ml-2">@{event.judge.username}</span>
+                  <span className="font-medium text-foreground">{event.judge.full_name}</span>
+                  <span className="text-muted-foreground ml-2">@{event.judge.username}</span>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 text-sm text-gray-600">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Award className="h-4 w-4" />
                 <span className="capitalize">{event.judge.tier} Judge</span>
               </div>
 
-              <div className="flex items-center gap-2 text-sm text-gray-600">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Building className="h-4 w-4" />
                 <span>{event.event_role}</span>
               </div>
 
-              <div className="flex items-center gap-2 text-sm text-gray-600">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Calendar className="h-4 w-4" />
                 <span>{new Date(event.event_date).toLocaleDateString()}</span>
               </div>
@@ -172,14 +172,14 @@ export function JudgeEventsVerification() {
                 href={event.event_link}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800"
+                className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
               >
                 <ExternalLink className="h-3 w-3" />
                 View Event Link
               </a>
             )}
 
-            <div className="mt-3 text-xs text-gray-500">
+            <div className="mt-3 text-xs text-muted-foreground">
               Submitted: {new Date(event.created_at).toLocaleString()}
             </div>
           </div>
@@ -226,7 +226,7 @@ export function JudgeEventsVerification() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
   }
@@ -234,8 +234,8 @@ export function JudgeEventsVerification() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Judge Events Verification</h1>
-        <p className="text-gray-600 mt-2">
+        <h1 className="text-2xl font-bold text-foreground">Judge Events Verification</h1>
+        <p className="text-muted-foreground mt-2">
           Review and verify judge event submissions to maintain credibility
         </p>
       </div>
@@ -243,7 +243,7 @@ export function JudgeEventsVerification() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-gray-600">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
               Pending Verification
             </CardTitle>
           </CardHeader>

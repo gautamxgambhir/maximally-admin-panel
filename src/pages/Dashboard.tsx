@@ -77,10 +77,10 @@ export function Dashboard() {
     return (
       <div className="space-y-6">
         <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-1/4 mb-4"></div>
+          <div className="h-8 bg-muted rounded w-1/4 mb-4"></div>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="h-32 bg-gray-200 rounded-lg"></div>
+              <div key={i} className="h-32 bg-muted rounded-lg"></div>
             ))}
           </div>
         </div>
@@ -386,9 +386,9 @@ export function Dashboard() {
         <CardContent>
           {blogs.length === 0 ? (
             <div className="text-center py-6">
-              <FileText className="mx-auto h-12 w-12 text-gray-400" />
-              <h3 className="mt-2 text-sm font-semibold text-gray-900">No blogs yet</h3>
-              <p className="mt-1 text-sm text-gray-500">
+              <FileText className="mx-auto h-12 w-12 text-muted-foreground" />
+              <h3 className="mt-2 text-sm font-semibold text-foreground">No blogs yet</h3>
+              <p className="mt-1 text-sm text-muted-foreground">
                 Get started by creating your first blog post.
               </p>
               <div className="mt-6">
@@ -438,9 +438,9 @@ export function Dashboard() {
         <CardContent>
           {hackathons.length === 0 ? (
             <div className="text-center py-6">
-              <Trophy className="mx-auto h-12 w-12 text-gray-400" />
-              <h3 className="mt-2 text-sm font-semibold text-gray-900">No hackathons yet</h3>
-              <p className="mt-1 text-sm text-gray-500">
+              <Trophy className="mx-auto h-12 w-12 text-muted-foreground" />
+              <h3 className="mt-2 text-sm font-semibold text-foreground">No hackathons yet</h3>
+              <p className="mt-1 text-sm text-muted-foreground">
                 Get started by creating your first hackathon.
               </p>
               <div className="mt-6">

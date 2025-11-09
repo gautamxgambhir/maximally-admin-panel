@@ -18,12 +18,12 @@ if (!supabaseUrl || !supabaseKey) {
 // Create client with proper auth configuration
 export const supabase = createClient(supabaseUrl, supabaseKey, {
   auth: {
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: true,
-    storage: window.localStorage,
+    autoRefreshToken: false,
+    persistSession: false, // Don't persist sessions - logout on refresh
+    detectSessionInUrl: false,
+    storage: window.sessionStorage, // Use sessionStorage instead of localStorage
     storageKey: 'maximally-admin-auth',
-    flowType: 'pkce'
+    flowType: 'implicit' // Use implicit flow for simpler auth
   },
   global: {
     headers: {
@@ -31,7 +31,5 @@ export const supabase = createClient(supabaseUrl, supabaseKey, {
     }
   }
 })
-
-console.log('✅ Supabase client initialized with URL:', supabaseUrl)
 
 // Using anon key for proper authentication flow

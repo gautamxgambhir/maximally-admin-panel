@@ -496,8 +496,8 @@ export function CertificateGenerator() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Certificate Generator</h1>
-          <p className="text-gray-600">Create certificates for winners, participants, and judges</p>
+          <h1 className="text-2xl font-bold text-foreground">Certificate Management</h1>
+          <p className="text-muted-foreground">Manage and download generated certificates</p>
         </div>
       </div>
 

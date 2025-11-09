@@ -426,7 +426,7 @@ export function EnhancedCertificateList() {
 
   // Generate consistent colors for batch IDs
   const getBatchColor = (batchId: string | undefined): string => {
-    if (!batchId) return 'bg-gray-400' // Single certificate (no batch)
+    if (!batchId) return 'bg-muted' // Single certificate (no batch)
     
     // Create a simple hash of the batch ID to generate consistent colors
     let hash = 0
@@ -450,11 +450,11 @@ export function EnhancedCertificateList() {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-gray-900">Certificates</h1>
+          <h1 className="text-2xl font-bold text-foreground">Certificates</h1>
         </div>
         <div className="text-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <div className="text-gray-500">Loading certificates...</div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <div className="text-muted-foreground">Loading certificates...</div>
         </div>
       </div>
     )
@@ -464,8 +464,8 @@ export function EnhancedCertificateList() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Certificate Management</h1>
-          <p className="text-gray-600">Manage and download generated certificates</p>
+          <h1 className="text-2xl font-bold text-foreground">Certificate Management</h1>
+          <p className="text-muted-foreground">Manage and download generated certificates</p>
         </div>
         <div className="flex items-center gap-3">
           <Button

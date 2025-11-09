@@ -4,11 +4,13 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useAuth } from '@/contexts/AuthContext'
+import { useTheme } from '@/contexts/ThemeContext'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
+import { Moon, Sun } from 'lucide-react'
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -19,6 +21,7 @@ type LoginForm = z.infer<typeof loginSchema>
 
 export function Login() {
   const { user, isAdmin, signIn } = useAuth()
+  const { theme, toggleTheme } = useTheme()
   const navigate = useNavigate()
   const [isLoading, setIsLoading] = useState(false)
   
@@ -36,18 +39,13 @@ export function Login() {
   }
 
   const onSubmit = async (data: LoginForm) => {
-    console.log('🚀 Login form submitted')
     setIsLoading(true)
     try {
-      console.log('📞 Calling signIn...')
       const { error } = await signIn(data.email, data.password)
-      console.log('📞 signIn returned:', { error })
       
       if (error) {
-        console.error('❌ Sign in failed:', error)
         toast.error(error.message || 'Failed to sign in')
       } else {
-        console.log('✅ Sign in successful')
         toast.success('Signed in successfully!')
         // Give a small delay for state to update
         setTimeout(() => {
@@ -55,16 +53,29 @@ export function Login() {
         }, 100)
       }
     } catch (error: any) {
-      console.error('💥 Exception in onSubmit:', error)
       toast.error(error.message || 'An unexpected error occurred')
     } finally {
-      console.log('🏁 Setting isLoading to false')
       setIsLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center bg-background py-12 px-4 sm:px-6 lg:px-8 relative">
+      {/* Theme toggle button */}
+      <div className="absolute top-4 right-4">
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={toggleTheme}
+        >
+          {theme === 'light' ? (
+            <Moon className="h-4 w-4" />
+          ) : (
+            <Sun className="h-4 w-4" />
+          )}
+        </Button>
+      </div>
+      
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold text-center">

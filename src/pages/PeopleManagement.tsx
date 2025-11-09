@@ -113,8 +113,8 @@ export function PeopleManagement() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">People Management</h1>
-          <p className="text-gray-600">
+          <h1 className="text-2xl font-bold text-foreground">People Management</h1>
+          <p className="text-muted-foreground">
             Manage your team members across different categories
           </p>
         </div>
@@ -154,7 +154,7 @@ export function PeopleManagement() {
               <CardContent>
                 <div className="flex gap-4 mb-4">
                   <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       placeholder={`Search ${category.label.toLowerCase()}...`}
                       value={searchQuery}
@@ -166,7 +166,7 @@ export function PeopleManagement() {
 
                 {isLoading ? (
                   <div className="flex justify-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                   </div>
                 ) : (
                   <Table>
@@ -184,14 +184,14 @@ export function PeopleManagement() {
                         <TableRow key={person.id}>
                           <TableCell>
                             <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
-                                <span className="text-xs font-medium text-gray-600">
+                              <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
+                                <span className="text-xs font-medium text-muted-foreground">
                                   {person.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
                                 </span>
                               </div>
                               <div>
                                 <div className="font-medium">{person.name}</div>
-                                <div className="text-sm text-gray-500 flex items-center gap-1">
+                                <div className="text-sm text-muted-foreground flex items-center gap-1">
                                   {person.linkedin_url && (
                                     <ExternalLink className="h-3 w-3" />
                                   )}

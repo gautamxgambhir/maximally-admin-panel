@@ -25,14 +25,14 @@ export function MarkdownPreview({
 }: MarkdownPreviewProps) {
   if (!content.trim()) {
     return (
-      <div className={cn("maximally-blog-content", className)} style={style}>
+      <div className={cn("maximally-blog-content bg-white dark:bg-white", className)} style={style}>
         <p className="text-gray-500 italic font-mono text-sm">Start typing to see preview...</p>
       </div>
     )
   }
 
   return (
-    <article className={cn("max-w-4xl mx-auto px-2 sm:px-4 py-4 sm:py-6", className)} style={style}>
+    <article className={cn("max-w-4xl mx-auto px-2 sm:px-4 py-4 sm:py-6 bg-white dark:bg-white", className)} style={style}>
       {showTitle && title && (
         <div className="mb-6 sm:mb-8">
           <h1 className="font-press-start text-lg sm:text-2xl lg:text-4xl text-red-600 mb-4 leading-tight break-words">

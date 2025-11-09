@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
-import type { User, Session, AuthChangeEvent } from '@supabase/supabase-js'
+import type { User, Session } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
-import { getProfile, isUserAdmin } from '@/lib/profileApi'
+import { getProfile } from '@/lib/profileApi'
 import { SessionManager } from '@/lib/sessionManager'
 import type { Profile } from '@/types/profile'
 
@@ -29,30 +29,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let mounted = true
-    let timeoutId: NodeJS.Timeout
     
     const initializeAuth = async () => {
-      // Set a timeout to prevent infinite loading
-      timeoutId = setTimeout(() => {
-        if (mounted) {
-          
-          setLoading(false)
-          setRoleChecking(false)
-        }
-      }, 5000) // 5 second timeout
-      
       try {
         
+        // Always clear everything on page load (no persistent sessions)
+        // Use a more aggressive clear
+        try {
+          await supabase.auth.signOut({ scope: 'local' })
+        } catch (e) {
+          // Ignore signout errors on first load
+        }
         
-        // Always start fresh - no persistent sessions
+        // Clear all storage
+        try {
+          sessionStorage.clear()
+          localStorage.clear()
+        } catch (e) {
+          // Ignore storage clear errors
+        }
         
-        
-        // Clear Supabase session
-        await supabase.auth.signOut()
-        
-        // Clear storage
-        sessionStorage.clear()
-        localStorage.clear()
+        // Small delay to ensure everything is cleared
+        await new Promise(resolve => setTimeout(resolve, 200))
         
         if (mounted) {
           setUser(null)
@@ -63,7 +61,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setRoleChecking(false)
         }
       } catch (error) {
-        
+        // Ignore initialization errors
         if (mounted) {
           setUser(null)
           setSession(null)
@@ -72,8 +70,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setLoading(false)
           setRoleChecking(false)
         }
-      } finally {
-        clearTimeout(timeoutId)
       }
     }
     
@@ -127,73 +123,87 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return () => {
       mounted = false
-      clearTimeout(timeoutId)
       subscription.unsubscribe()
     }
   }, [])
 
   const signIn = async (email: string, password: string) => {
-    console.log('🔐 signIn called with email:', email)
     try {
       setLoading(true)
-      console.log('⏳ Loading set to true')
       
-      // Add timeout to prevent hanging forever
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Sign in request timed out after 10 seconds')), 10000)
-      )
+      // Clear any existing session first to prevent conflicts
+      // Use Promise.race to timeout the signOut if it hangs
+      const signOutPromise = supabase.auth.signOut({ scope: 'local' })
+      const timeoutPromise = new Promise(resolve => setTimeout(resolve, 2000))
       
-      const signInPromise = supabase.auth.signInWithPassword({ email, password })
-      
-      const result = await Promise.race([signInPromise, timeoutPromise]) as any
-      console.log('📡 Auth result:', result)
-      
-      if (result.error) {
-        console.error('❌ Auth error:', result.error)
-        setLoading(false)
-        return { error: result.error }
+      try {
+        await Promise.race([signOutPromise, timeoutPromise])
+      } catch (e) {
+        // Ignore signout errors
       }
       
-      if (!result.data.user) {
-        console.error('❌ No user data returned')
+      // Clear storage
+      sessionStorage.clear()
+      localStorage.clear()
+      
+      // Small delay to ensure cleanup completes
+      await new Promise(resolve => setTimeout(resolve, 200))
+      
+      // Add timeout to sign in request
+      const signInPromise = supabase.auth.signInWithPassword({ 
+        email, 
+        password 
+      })
+      
+      const signInTimeout = new Promise<any>((_, reject) => 
+        setTimeout(() => reject(new Error('Sign in timed out after 15 seconds')), 15000)
+      )
+      
+      let result
+      try {
+        result = await Promise.race([signInPromise, signInTimeout])
+      } catch (timeoutError: any) {
+        setLoading(false)
+        return { error: { message: timeoutError.message } }
+      }
+      
+      const { data, error } = result
+      
+      if (error) {
+        setLoading(false)
+        return { error }
+      }
+      
+      if (!data.user) {
         setLoading(false)
         return { error: { message: 'No user data returned' } }
       }
       
-      console.log('👤 User authenticated:', result.data.user.id)
-      
       // Verify admin role immediately
-      console.log('🔍 Fetching profile for user:', result.data.user.id)
-      const { data: profileData, error: profileError } = await getProfile(result.data.user.id)
-      console.log('📋 Profile result:', { profileData, profileError })
+      const { data: profileData, error: profileError } = await getProfile(data.user.id)
       
       if (profileError) {
-        console.error('❌ Profile fetch error:', profileError)
-        await supabase.auth.signOut()
+        await supabase.auth.signOut({ scope: 'local' })
         setLoading(false)
         return { error: { message: 'Failed to fetch profile' } }
       }
       
       if (!profileData || profileData.role !== 'admin') {
-        console.error('❌ Not admin. Profile:', profileData)
-        await supabase.auth.signOut()
+        await supabase.auth.signOut({ scope: 'local' })
         setLoading(false)
         return { error: { message: 'Access denied. Admin role required.' } }
       }
       
-      console.log('✅ Admin verified, setting states')
       // User is admin - activate session and set states
       SessionManager.activateSession()
-      setUser(result.data.user)
-      setSession(result.data.session)
+      setUser(data.user)
+      setSession(data.session)
       setProfile(profileData)
       setIsAdmin(true)
       setLoading(false)
-      console.log('✅ Sign in complete')
       
       return { error: null }
     } catch (error: any) {
-      console.error('💥 Unexpected error in signIn:', error)
       setLoading(false)
       return { error: { message: error.message || 'Unexpected error' } }
     }

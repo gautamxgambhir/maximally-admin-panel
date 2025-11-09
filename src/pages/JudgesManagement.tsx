@@ -81,10 +81,10 @@ function SortableJudgeCard({
             <div 
               {...attributes} 
               {...listeners}
-              className="flex flex-col items-center justify-center bg-gray-100 rounded px-3 py-2 min-w-[60px] cursor-grab active:cursor-grabbing hover:bg-gray-200 transition-colors"
+              className="flex flex-col items-center justify-center bg-muted rounded px-3 py-2 min-w-[60px] cursor-grab active:cursor-grabbing hover:bg-accent transition-colors"
             >
-              <GripVertical className="h-5 w-5 text-gray-400 mb-1" />
-              <span className="text-sm font-bold text-gray-600">#{index + 1}</span>
+              <GripVertical className="h-5 w-5 text-muted-foreground mb-1" />
+              <span className="text-sm font-bold text-muted-foreground">#{index + 1}</span>
             </div>
 
             {/* Profile Picture */}
@@ -97,7 +97,7 @@ function SortableJudgeCard({
             {/* Judge Details */}
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-3 mb-2">
-                <h3 className="text-lg font-semibold text-gray-900">{judge.name}</h3>
+                <h3 className="text-lg font-semibold text-foreground">{judge.name}</h3>
                 {judge.username && (
                   <Badge variant="outline">@{judge.username}</Badge>
                 )}
@@ -105,48 +105,48 @@ function SortableJudgeCard({
                   <Badge variant="secondary" className="capitalize">{judge.tier}</Badge>
                 )}
                 {judge.is_published && (
-                  <Badge className="bg-green-500">Published</Badge>
+                  <Badge className="bg-green-600 dark:bg-green-700">Published</Badge>
                 )}
               </div>
               
               {judge.headline && (
-                <p className="text-sm text-gray-600 mb-3">{judge.headline}</p>
+                <p className="text-sm text-muted-foreground mb-3">{judge.headline}</p>
               )}
               
               <div className="grid md:grid-cols-3 gap-3 text-sm">
                 <div>
-                  <span className="text-gray-500">Role:</span>
-                  <span className="ml-2 font-medium text-gray-900">{judge.role_in_company || 'N/A'}</span>
+                  <span className="text-muted-foreground">Role:</span>
+                  <span className="ml-2 font-medium text-foreground">{judge.role_in_company || 'N/A'}</span>
                 </div>
                 <div>
-                  <span className="text-gray-500">Company:</span>
-                  <span className="ml-2 font-medium text-gray-900">{judge.company || 'N/A'}</span>
+                  <span className="text-muted-foreground">Company:</span>
+                  <span className="ml-2 font-medium text-foreground">{judge.company || 'N/A'}</span>
                 </div>
                 <div>
-                  <span className="text-gray-500">Location:</span>
-                  <span className="ml-2 font-medium text-gray-900">{judge.location || 'N/A'}</span>
+                  <span className="text-muted-foreground">Location:</span>
+                  <span className="ml-2 font-medium text-foreground">{judge.location || 'N/A'}</span>
                 </div>
                 <div>
-                  <span className="text-gray-500">Events Judged:</span>
-                  <span className="ml-2 font-medium text-gray-900">{judge.total_events_judged || 0}</span>
+                  <span className="text-muted-foreground">Events Judged:</span>
+                  <span className="ml-2 font-medium text-foreground">{judge.total_events_judged || 0}</span>
                 </div>
                 <div>
-                  <span className="text-gray-500">Teams Evaluated:</span>
-                  <span className="ml-2 font-medium text-gray-900">{judge.total_teams_evaluated || 0}</span>
+                  <span className="text-muted-foreground">Teams Evaluated:</span>
+                  <span className="ml-2 font-medium text-foreground">{judge.total_teams_evaluated || 0}</span>
                 </div>
                 <div>
-                  <span className="text-gray-500">Mentorship Hours:</span>
-                  <span className="ml-2 font-medium text-gray-900">{judge.total_mentorship_hours || 0}</span>
+                  <span className="text-muted-foreground">Mentorship Hours:</span>
+                  <span className="ml-2 font-medium text-foreground">{judge.total_mentorship_hours || 0}</span>
                 </div>
                 <div>
-                  <span className="text-gray-500">Created:</span>
-                  <span className="ml-2 font-medium text-gray-900">
+                  <span className="text-muted-foreground">Created:</span>
+                  <span className="ml-2 font-medium text-foreground">
                     {new Date(judge.created_at).toLocaleDateString()}
                   </span>
                 </div>
                 <div>
-                  <span className="text-gray-500">ID:</span>
-                  <span className="ml-2 font-medium text-gray-900">{judge.id}</span>
+                  <span className="text-muted-foreground">ID:</span>
+                  <span className="ml-2 font-medium text-foreground">{judge.id}</span>
                 </div>
               </div>
             </div>
@@ -255,8 +255,8 @@ export function JudgesManagement() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Judges Management</h1>
-          <p className="text-gray-600">
+          <h1 className="text-2xl font-bold text-foreground">Judges Management</h1>
+          <p className="text-muted-foreground">
             Manage judges for hackathons and events ({judgesCount} total)
           </p>
         </div>
@@ -280,7 +280,7 @@ export function JudgesManagement() {
         <CardContent>
           <div className="flex gap-4 mb-4">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search judges..."
                 value={searchQuery}
@@ -292,7 +292,7 @@ export function JudgesManagement() {
 
           {isLoading ? (
             <div className="flex justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
           ) : (
             <DndContext
@@ -322,8 +322,8 @@ export function JudgesManagement() {
           {!isLoading && filteredJudges.length === 0 && (
             <Card>
               <CardContent className="text-center py-12">
-                <Scale className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-500 mb-2">
+                <Scale className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground mb-2">
                   {searchQuery 
                     ? `No judges found matching "${searchQuery}"`
                     : 'No judges added yet.'
