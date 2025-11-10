@@ -543,7 +543,7 @@ export function EnhancedCertificateList() {
                         />
                         <div className="flex-1">
                           <div className="font-mono text-xs">{batchId}</div>
-                          <div className="text-xs text-gray-500">{batchCerts.length} certificates</div>
+                          <div className="text-xs text-muted-foreground">{batchCerts.length} certificates</div>
                         </div>
                         {isSelected && <Check className="h-3 w-3" />}
                       </DropdownMenuItem>
@@ -577,7 +577,7 @@ export function EnhancedCertificateList() {
               <div className="flex items-center justify-between">
                 <div>
                   <div className="text-2xl font-bold text-blue-600">{stats.total || 0}</div>
-                  <div className="text-sm text-gray-600">Total</div>
+                  <div className="text-sm text-muted-foreground">Total</div>
                 </div>
                 <Activity className="h-8 w-8 text-blue-400" />
               </div>
@@ -588,7 +588,7 @@ export function EnhancedCertificateList() {
               <div className="flex items-center justify-between">
                 <div>
                   <div className="text-2xl font-bold text-green-600">{stats.active || 0}</div>
-                  <div className="text-sm text-gray-600">Active</div>
+                  <div className="text-sm text-muted-foreground">Active</div>
                 </div>
                 <TrendingUp className="h-8 w-8 text-green-400" />
               </div>
@@ -597,25 +597,25 @@ export function EnhancedCertificateList() {
           <Card className="border-red-200">
             <CardContent className="p-4">
               <div className="text-2xl font-bold text-red-600">{stats.inactive || 0}</div>
-              <div className="text-sm text-gray-600">Inactive</div>
+              <div className="text-sm text-muted-foreground">Inactive</div>
             </CardContent>
           </Card>
           <Card className="border-yellow-200">
             <CardContent className="p-4">
               <div className="text-2xl font-bold text-yellow-600">{stats.byType?.winner || 0}</div>
-              <div className="text-sm text-gray-600">Winners</div>
+              <div className="text-sm text-muted-foreground">Winners</div>
             </CardContent>
           </Card>
           <Card className="border-blue-200">
             <CardContent className="p-4">
               <div className="text-2xl font-bold text-blue-600">{stats.byType?.participant || 0}</div>
-              <div className="text-sm text-gray-600">Participants</div>
+              <div className="text-sm text-muted-foreground">Participants</div>
             </CardContent>
           </Card>
           <Card className="border-green-200">
             <CardContent className="p-4">
               <div className="text-2xl font-bold text-green-600">{stats.byType?.judge || 0}</div>
-              <div className="text-sm text-gray-600">Judges</div>
+              <div className="text-sm text-muted-foreground">Judges</div>
             </CardContent>
           </Card>
         </div>
@@ -633,7 +633,7 @@ export function EnhancedCertificateList() {
               <div className="space-y-2">
                 <Label>Search</Label>
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                   <Input
                     placeholder="Search by name, ID, or admin email..."
                     value={filters.search || ''}
@@ -736,9 +736,9 @@ export function EnhancedCertificateList() {
         <CardContent className="p-0 overflow-hidden">
           {sortedCertificates.length === 0 ? (
             <div className="text-center py-12">
-              <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <div className="text-gray-500 text-lg mb-2">No certificates found</div>
-              <div className="text-gray-400">
+              <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <div className="text-muted-foreground text-lg mb-2">No certificates found</div>
+              <div className="text-muted-foreground">
                 {Object.keys(filters).length > 0 
                   ? 'Try adjusting your filters to see more results'
                   : 'Start by generating some certificates'
@@ -795,7 +795,7 @@ export function EnhancedCertificateList() {
                   const TypeIcon = typeConfig.icon
 
                   return (
-                    <TableRow key={certificate.id} className={`h-10 ${isSelected ? 'bg-blue-50' : ''}`}>
+                    <TableRow key={certificate.id} className={`h-10 ${isSelected ? 'bg-blue-50 dark:bg-blue-950/30' : ''}`}>
                       <TableCell className="p-2">
                         <button
                           onClick={() => toggleSelectCertificate(certificate.id)}
@@ -819,7 +819,7 @@ export function EnhancedCertificateList() {
                           </div>
                           <button
                             type="button"
-                            className="h-4 w-4 p-0 rounded hover:bg-gray-100 flex items-center justify-center transition-colors"
+                            className="h-4 w-4 p-0 rounded hover:bg-accent flex items-center justify-center transition-colors"
                             onClick={() => copyVerificationUrl(certificate.certificate_id)}
                             title="Copy verification URL"
                           >
@@ -829,9 +829,9 @@ export function EnhancedCertificateList() {
                       </TableCell>
                       <TableCell className="whitespace-nowrap p-2">
                         <div>
-                          <div className="font-medium text-xs text-gray-900">{certificate.participant_name}</div>
+                          <div className="font-medium text-xs text-foreground">{certificate.participant_name}</div>
                           {certificate.participant_email && (
-                            <div className="text-xs text-gray-500">{certificate.participant_email}</div>
+                            <div className="text-xs text-muted-foreground">{certificate.participant_email}</div>
                           )}
                         </div>
                       </TableCell>
@@ -842,7 +842,7 @@ export function EnhancedCertificateList() {
                         </Badge>
                       </TableCell>
                       <TableCell className="whitespace-nowrap p-2">
-                        <div className="font-medium text-xs text-gray-900">
+                        <div className="font-medium text-xs text-foreground">
                           {certificate.hackathon_name}
                         </div>
                       </TableCell>
@@ -852,14 +852,14 @@ export function EnhancedCertificateList() {
                             {certificate.position}
                           </Badge>
                         ) : (
-                          <span className="text-gray-400 text-xs">-</span>
+                          <span className="text-muted-foreground text-xs">-</span>
                         )}
                       </TableCell>
                       <TableCell className="p-2">
                         <button
                           onClick={() => handleStatusToggle(certificate)}
                           disabled={updateStatus.isPending}
-                          className="flex items-center gap-1 hover:bg-gray-100 p-1 rounded transition-colors"
+                          className="flex items-center gap-1 hover:bg-accent p-1 rounded transition-colors"
                         >
                           {certificate.status === 'active' ? (
                             <>
@@ -868,27 +868,27 @@ export function EnhancedCertificateList() {
                             </>
                           ) : (
                             <>
-                              <ToggleLeft className="h-3 w-3 text-gray-400" />
-                              <span className="text-gray-400 text-xs">Inactive</span>
+                              <ToggleLeft className="h-3 w-3 text-muted-foreground" />
+                              <span className="text-muted-foreground text-xs">Inactive</span>
                             </>
                           )}
                         </button>
                       </TableCell>
                       <TableCell className="text-xs p-2">
                         <div className="flex items-center gap-1">
-                          <User className="h-3 w-3 text-gray-400" />
+                          <User className="h-3 w-3 text-muted-foreground" />
                           <div className="whitespace-nowrap">
                             {certificate.admin_email ? (
-                              <div className="font-medium text-gray-900 text-xs">
+                              <div className="font-medium text-foreground text-xs">
                                 {certificate.admin_email}
                               </div>
                             ) : (
-                              <span className="text-gray-400 text-xs">Unknown Admin</span>
+                              <span className="text-muted-foreground text-xs">Unknown Admin</span>
                             )}
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell className="text-xs text-gray-500 whitespace-nowrap p-2">
+                      <TableCell className="text-xs text-muted-foreground whitespace-nowrap p-2">
                         <div className="flex items-center gap-1">
                           <Calendar className="h-2.5 w-2.5" />
                           <span className="text-xs">
@@ -926,7 +926,7 @@ export function EnhancedCertificateList() {
                             
                             <DropdownMenuSeparator />
                             
-                            <div className="px-2 py-1.5 text-xs text-gray-500">
+                            <div className="px-2 py-1.5 text-xs text-muted-foreground">
                               <div className="flex items-center gap-2">
                                 <User className="h-3 w-3" />
                                 <span>Created by: {certificate.admin_email || 'Unknown'}</span>

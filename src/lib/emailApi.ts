@@ -31,14 +31,55 @@ export async function sendCertificateEmails(certificates: Certificate[]): Promis
 
   if (items.length === 0) return { sent: 0, failed: 0 }
 
-  const { data, error } = await supabase.functions.invoke('send-certificate-email', {
-    body: { certificates: items },
-  })
+  try {
+    // Get the current session to ensure we have auth token
+    const { data: { session } } = await supabase.auth.getSession()
+    
+    if (!session) {
+      console.error('No active session found')
+      return { sent: 0, failed: items.length, errors: ['Not authenticated. Please log in again.'] }
+    }
 
-  if (error) {
-    console.error('Failed to invoke send-certificate-email function:', error)
-    return { sent: 0, failed: items.length, errors: [error.message || 'Invoke error'] }
+    const { data, error } = await supabase.functions.invoke('send-certificate-email', {
+      body: { certificates: items },
+    })
+
+    if (error) {
+      console.error('Failed to invoke send-certificate-email function:', error)
+      console.error('Error details:', {
+        message: error.message,
+        name: error.name,
+        context: error.context,
+      })
+      
+      let errorMsg = 'Failed to send email'
+      if (error.message) {
+        errorMsg = error.message
+      } else if (error.context?.error) {
+        errorMsg = error.context.error
+      }
+      
+      // Check for common issues
+      if (errorMsg.includes('Failed to send a request')) {
+        errorMsg = 'Email service is unavailable. Please check your internet connection and try again.'
+      } else if (errorMsg.includes('FunctionsRelayError')) {
+        errorMsg = 'Email service connection error. Please try again in a moment.'
+      } else if (errorMsg.includes('FunctionsFetchError')) {
+        errorMsg = 'Unable to reach email service. Please check your network connection.'
+      }
+      
+      return { sent: 0, failed: items.length, errors: [errorMsg] }
+    }
+
+    if (!data) {
+      console.error('No data returned from send-certificate-email function')
+      return { sent: 0, failed: items.length, errors: ['No response from email service'] }
+    }
+
+    return data as { sent: number; failed: number; errors?: string[] }
+  } catch (err) {
+    console.error('Exception while invoking send-certificate-email function:', err)
+    const errorMsg = err instanceof Error ? err.message : 'Unknown error occurred'
+    return { sent: 0, failed: items.length, errors: [errorMsg] }
   }
-
-  return data as { sent: number; failed: number; errors?: string[] }
 }

@@ -1,12 +1,13 @@
 // Supabase Edge Function: send-certificate-email
 // Securely sends certificate emails using Resend without exposing secrets to the client.
-// Deploy with: supabase functions deploy send-certificate-email
-// Set secrets: supabase secrets set RESEND_API_KEY=... RESEND_FROM=...
 
-// deno-lint-ignore-file no-explicit-any
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { encode as base64Encode } from "https://deno.land/std@0.168.0/encoding/base64.ts"
 
-import { serve } from "https://deno.land/std@0.223.0/http/server.ts"
-import { encode as base64Encode } from "https://deno.land/std@0.223.0/encoding/base64.ts"
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
 
 interface PayloadItem {
   to: string
@@ -18,17 +19,6 @@ interface PayloadItem {
   pdf_url?: string
   jpg_url?: string
   verification_url: string
-}
-
-function corsHeaders(req: Request) {
-  // Echo requested headers to satisfy preflight, fall back to common headers
-  const requested = req.headers.get('access-control-request-headers')
-  return {
-    'Access-Control-Allow-Origin': req.headers.get('origin') || '*',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Allow-Headers': requested || 'authorization, x-client-info, apikey, content-type',
-    'Access-Control-Max-Age': '86400',
-  }
 }
 
 async function fetchAsBase64(url?: string): Promise<{ base64?: string; filename?: string; mime?: string }> {
@@ -68,21 +58,19 @@ function emailHtml(p: PayloadItem) {
 }
 
 async function sendViaResend(item: PayloadItem, apiKey: string, fromEmail: string): Promise<{ ok: boolean; error?: string }> {
-  // Attempt to attach JPG (smaller) and include links; attach PDF if reasonable
   const attachments: Array<{ filename: string; content: string }> = []
 
-  // Fetch JPG and name it predictably (avoid signed URL query in filename)
+  // Fetch JPG
   const jpg = await fetchAsBase64(item.jpg_url)
   if (jpg.base64) {
-    const jpgExt = (jpg.mime || '').includes('png') ? 'png' : ((jpg.mime || '').includes('jpeg') ? 'jpg' : 'jpg')
+    const jpgExt = (jpg.mime || '').includes('png') ? 'png' : 'jpg'
     const jpgName = `${item.certificate_id}.${jpgExt}`
     attachments.push({ filename: jpgName, content: jpg.base64 })
   }
 
-  // Try PDF as well but skip if too large (> 4MB base64 roughly increases by ~33%)
+  // Fetch PDF (skip if too large)
   const pdf = await fetchAsBase64(item.pdf_url)
   if (pdf.base64) {
-    // Rough size check
     const approxBytes = Math.ceil((pdf.base64.length * 3) / 4)
     if (approxBytes <= 4 * 1024 * 1024) {
       const pdfName = `${item.certificate_id}.pdf`
@@ -116,30 +104,37 @@ async function sendViaResend(item: PayloadItem, apiKey: string, fromEmail: strin
 }
 
 serve(async (req) => {
-  const cors = corsHeaders(req)
-
+  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: cors })
+    return new Response('ok', { 
+      status: 200,
+      headers: corsHeaders 
+    })
   }
 
   if (req.method !== 'POST') {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), {
       status: 405,
-      headers: { 'Content-Type': 'application/json', ...cors },
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   }
 
   const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
   const RESEND_FROM = Deno.env.get('RESEND_FROM') || 'certificates@maximally.in'
+  
   if (!RESEND_API_KEY) {
-    return new Response(JSON.stringify({ error: 'Missing RESEND_API_KEY' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json', ...cors },
+    return new Response(JSON.stringify({ 
+      error: 'Email service not configured',
+      sent: 0,
+      failed: 0
+    }), {
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   }
 
   try {
-    const body = await req.json().catch(() => ({})) as { certificates?: PayloadItem[]; certificate?: PayloadItem }
+    const body = await req.json()
     const items: PayloadItem[] = Array.isArray(body.certificates)
       ? body.certificates
       : body.certificate
@@ -147,9 +142,13 @@ serve(async (req) => {
         : []
 
     if (items.length === 0) {
-      return new Response(JSON.stringify({ error: 'No certificates provided' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json', ...cors },
+      return new Response(JSON.stringify({ 
+        error: 'No certificates provided',
+        sent: 0,
+        failed: 0
+      }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
@@ -162,18 +161,25 @@ serve(async (req) => {
         continue
       }
       const res = await sendViaResend(item, RESEND_API_KEY, RESEND_FROM)
-      if (res.ok) sent++
-      else errors.push(`${item.certificate_id}: ${res.error}`)
+      if (res.ok) {
+        sent++
+      } else {
+        errors.push(`${item.certificate_id}: ${res.error}`)
+      }
     }
 
     return new Response(JSON.stringify({ sent, failed: items.length - sent, errors }), {
       status: 200,
-      headers: { 'Content-Type': 'application/json', ...cors },
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   } catch (e: any) {
-    return new Response(JSON.stringify({ error: e?.message || 'Unexpected error' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json', ...cors },
+    return new Response(JSON.stringify({ 
+      error: e?.message || 'Unexpected error',
+      sent: 0,
+      failed: 0
+    }), {
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   }
 })

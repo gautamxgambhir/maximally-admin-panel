@@ -29,6 +29,10 @@ export const supabase = createClient(supabaseUrl, supabaseKey, {
     headers: {
       'X-Client-Info': 'maximally-admin-panel'
     }
+  },
+  // Ensure functions use the correct URL
+  functions: {
+    region: undefined // Use default region
   }
 })
 
