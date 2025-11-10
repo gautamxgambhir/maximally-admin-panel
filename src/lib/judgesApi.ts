@@ -196,32 +196,19 @@ export async function updateJudge(judge: JudgeUpdate): Promise<Judge> {
   }
 }
 
-// Delete a judge via server API endpoint (uses service role on server side)
+// Delete a judge using database function (handles profile role update)
 export async function deleteJudge(id: number): Promise<void> {
-
-
-  // Get auth token
-  const { data: { session } } = await supabase.auth.getSession()
-  if (!session) {
-    throw new Error('Not authenticated')
-  }
-
-  // Call server endpoint which has service role access
-  const response = await fetch(`http://maximally.in/api/admin/judges/${id}`, {
-    method: 'DELETE',
-    headers: {
-      'Authorization': `Bearer ${session.access_token}`,
-      'Content-Type': 'application/json'
-    }
+  // Use the database function for atomic deletion with profile update
+  const { data, error } = await supabase.rpc('delete_judge_with_profile_update', {
+    judge_id_param: id
   })
 
-  if (!response.ok) {
-    const error = await response.json()
+  if (error) {
+    console.error('Error deleting judge:', error)
     throw new Error(error.message || 'Failed to delete judge')
   }
 
-  const result = await response.json()
-
+  console.log('Judge deleted successfully:', data)
 }
 
 
