@@ -118,6 +118,11 @@ export function Layout({ children }: LayoutProps) {
       icon: Award,
     },
     {
+      name: 'Email Generator',
+      href: '/email-generator',
+      icon: Mail,
+    },
+    {
       name: 'Admin Management',
       href: '/admin-management',
       icon: Users,

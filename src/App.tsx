@@ -14,6 +14,7 @@ import JudgeApplications from './pages/JudgeApplications'
 import JudgeInbox from './pages/JudgeInbox'
 import { JudgeEventsVerification } from './pages/JudgeEventsVerification'
 import { Certificates } from './pages/Certificates'
+import { EmailGenerator } from './pages/EmailGenerator'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { Layout } from './components/Layout'
 
@@ -158,6 +159,16 @@ function App() {
           <ProtectedRoute>
             <Layout>
               <Certificates />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/email-generator"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <EmailGenerator />
             </Layout>
           </ProtectedRoute>
         }
