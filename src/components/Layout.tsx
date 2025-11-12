@@ -16,11 +16,15 @@ import {
   Mail,
   Moon,
   Sun,
-  RefreshCw
+  RefreshCw,
+  ChevronDown,
+  ChevronRight,
+  X
 } from 'lucide-react'
 import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
+import { cn } from '@/lib/utils'
 
 interface LayoutProps {
   children: React.ReactNode
@@ -32,6 +36,8 @@ export function Layout({ children }: LayoutProps) {
   const navigate = useNavigate()
   const location = useLocation()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [isCollapsed, setIsCollapsed] = useState(false)
+  const [expandedCategories, setExpandedCategories] = useState<string[]>(['content', 'events', 'people', 'communication'])
   const [isRefreshing, setIsRefreshing] = useState(false)
   const queryClient = useQueryClient()
 
@@ -61,76 +67,120 @@ export function Layout({ children }: LayoutProps) {
     }
   }
 
-  const navigationItems = [
+  const navigationCategories = [
     {
-      name: 'Dashboard',
-      href: '/dashboard',
-      icon: LayoutDashboard,
+      id: 'overview',
+      name: 'Overview',
+      items: [
+        {
+          name: 'Dashboard',
+          href: '/dashboard',
+          icon: LayoutDashboard,
+        },
+      ]
     },
     {
-      name: 'Blogs',
-      href: '/blogs',
-      icon: FileText,
+      id: 'content',
+      name: 'Content',
+      items: [
+        {
+          name: 'Blogs',
+          href: '/blogs',
+          icon: FileText,
+        },
+        {
+          name: 'Create Blog',
+          href: '/blogs/create',
+          icon: Plus,
+        },
+      ]
     },
     {
-      name: 'Create Blog',
-      href: '/blogs/create',
-      icon: Plus,
+      id: 'events',
+      name: 'Events',
+      items: [
+        {
+          name: 'Hackathons',
+          href: '/hackathons',
+          icon: Trophy,
+        },
+        {
+          name: 'Create Hackathon',
+          href: '/hackathons/create',
+          icon: Plus,
+        },
+        {
+          name: 'Certificates',
+          href: '/certificates',
+          icon: Award,
+        },
+      ]
     },
     {
-      name: 'Hackathons',
-      href: '/hackathons',
-      icon: Trophy,
+      id: 'people',
+      name: 'People & Judges',
+      items: [
+        {
+          name: 'People',
+          href: '/people',
+          icon: UserCheck,
+        },
+        {
+          name: 'Judges',
+          href: '/judges',
+          icon: Scale,
+        },
+        {
+          name: 'Judge Applications',
+          href: '/judge-applications',
+          icon: UserCheck,
+        },
+        {
+          name: 'Judge Inbox',
+          href: '/judge-inbox',
+          icon: Mail,
+        },
+        {
+          name: 'Judge Verification',
+          href: '/judge-events-verification',
+          icon: UserCheck,
+        },
+      ]
     },
     {
-      name: 'Create Hackathon',
-      href: '/hackathons/create',
-      icon: Plus,
+      id: 'communication',
+      name: 'Communication',
+      items: [
+        {
+          name: 'Email Generator',
+          href: '/email-generator',
+          icon: Mail,
+        },
+      ]
     },
     {
-      name: 'People',
-      href: '/people',
-      icon: UserCheck,
-    },
-    {
-      name: 'Judges',
-      href: '/judges',
-      icon: Scale,
-    },
-    {
-      name: 'Judge Applications',
-      href: '/judge-applications',
-      icon: UserCheck,
-    },
-    {
-      name: 'Judge Inbox',
-      href: '/judge-inbox',
-      icon: Mail,
-    },
-    {
-      name: 'Judge Events Verification',
-      href: '/judge-events-verification',
-      icon: UserCheck,
-    },
-    {
-      name: 'Certificates',
-      href: '/certificates',
-      icon: Award,
-    },
-    {
-      name: 'Email Generator',
-      href: '/email-generator',
-      icon: Mail,
-    },
-    {
-      name: 'Admin Management',
-      href: '/admin-management',
-      icon: Users,
+      id: 'settings',
+      name: 'Settings',
+      items: [
+        {
+          name: 'Admin Management',
+          href: '/admin-management',
+          icon: Users,
+        },
+      ]
     },
   ]
 
   const isActiveRoute = (href: string) => {
     return location.pathname === href
+  }
+
+  const toggleCategory = (categoryId: string) => {
+    setExpandedCategories(prev =>
+      prev.includes(categoryId)
+        ? prev.filter(id => id !== categoryId)
+        : [...prev, categoryId]
+    )
   }
 
   return (
@@ -170,80 +220,142 @@ export function Layout({ children }: LayoutProps) {
       </div>
 
       {/* Sidebar */}
-      <div className={`
-        fixed inset-y-0 left-0 z-40 w-64 bg-card border-r border-border shadow-lg transform transition-transform duration-200 ease-in-out
-        ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
-        lg:translate-x-0
-      `}>
-        <div className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h1 className="text-xl font-bold text-foreground">
-                Maximally Admin
-              </h1>
-              <p className="text-sm text-muted-foreground mt-1">
-                {user?.email}
-              </p>
-            </div>
-          </div>
-          
-          {/* Action buttons */}
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleRefresh}
-              disabled={isRefreshing}
-              className="flex-1"
-            >
-              <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
-              Refresh
-            </Button>
+      <div className={cn(
+        'fixed inset-y-0 left-0 z-40 bg-card border-r border-border shadow-lg transform transition-all duration-200 ease-in-out',
+        isCollapsed ? 'w-16' : 'w-64',
+        isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+      )}>
+        {/* Header */}
+        <div className="p-4 border-b border-border">
+          <div className="flex items-center justify-between">
+            {!isCollapsed ? (
+              <div className="flex-1 min-w-0">
+                <h1 className="text-lg font-bold text-foreground truncate">
+                  Maximally Admin
+                </h1>
+                <p className="text-xs text-muted-foreground truncate mt-0.5">
+                  {user?.email}
+                </p>
+              </div>
+            ) : (
+              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+                <span className="text-primary-foreground font-bold text-sm">M</span>
+              </div>
+            )}
+            
+            {/* Desktop collapse button */}
             <Button
               variant="ghost"
               size="icon"
-              onClick={toggleTheme}
+              onClick={() => setIsCollapsed(!isCollapsed)}
+              className="hidden lg:flex ml-2"
             >
-              {theme === 'light' ? (
-                <Moon className="h-4 w-4" />
+              {isCollapsed ? (
+                <ChevronRight className="h-4 w-4" />
               ) : (
-                <Sun className="h-4 w-4" />
+                <ChevronDown className="h-4 w-4 rotate-[-90deg]" />
               )}
             </Button>
+
+            {/* Mobile close button */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="lg:hidden ml-2"
+            >
+              <X className="h-4 w-4" />
+            </Button>
           </div>
+          
+          {/* Action buttons */}
+          {!isCollapsed && (
+            <div className="flex items-center gap-2 mt-3">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRefresh}
+                disabled={isRefreshing}
+                className="flex-1"
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+                Refresh
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={toggleTheme}
+              >
+                {theme === 'light' ? (
+                  <Moon className="h-4 w-4" />
+                ) : (
+                  <Sun className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
+          )}
         </div>
         
-        <nav className="px-4 space-y-2">
-          {navigationItems.map((item) => {
-            const Icon = item.icon
-            return (
-              <Link
-                key={item.href}
-                to={item.href}
-                onClick={() => setIsMobileMenuOpen(false)}
-                className={`
-                  flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-colors
-                  ${isActiveRoute(item.href)
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-foreground hover:bg-accent hover:text-accent-foreground'
-                  }
-                `}
-              >
-                <Icon className="h-5 w-5 mr-3" />
-                {item.name}
-              </Link>
-            )
-          })}
+        {/* Navigation */}
+        <nav className="flex-1 overflow-y-auto p-2">
+          {navigationCategories.map((category) => (
+            <div key={category.id} className="mb-2">
+              {/* Category Header */}
+              {!isCollapsed && category.id !== 'overview' && (
+                <button
+                  onClick={() => toggleCategory(category.id)}
+                  className="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <span>{category.name}</span>
+                  {expandedCategories.includes(category.id) ? (
+                    <ChevronDown className="h-3 w-3" />
+                  ) : (
+                    <ChevronRight className="h-3 w-3" />
+                  )}
+                </button>
+              )}
+
+              {/* Category Items */}
+              {(isCollapsed || category.id === 'overview' || expandedCategories.includes(category.id)) && (
+                <div className="space-y-1">
+                  {category.items.map((item) => {
+                    const Icon = item.icon
+                    return (
+                      <Link
+                        key={item.href}
+                        to={item.href}
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        className={cn(
+                          'flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors',
+                          isActiveRoute(item.href)
+                            ? 'bg-primary text-primary-foreground'
+                            : 'text-foreground hover:bg-accent hover:text-accent-foreground',
+                          isCollapsed && 'justify-center'
+                        )}
+                        title={isCollapsed ? item.name : undefined}
+                      >
+                        <Icon className={cn('h-5 w-5', !isCollapsed && 'mr-3')} />
+                        {!isCollapsed && <span className="truncate">{item.name}</span>}
+                      </Link>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          ))}
         </nav>
 
-        <div className="absolute bottom-4 left-4 right-4">
+        {/* Footer */}
+        <div className="p-4 border-t border-border">
           <Button
             variant="outline"
             onClick={handleSignOut}
-            className="w-full"
+            className={cn('w-full', isCollapsed && 'px-0')}
+            size={isCollapsed ? 'icon' : 'default'}
+            title={isCollapsed ? 'Sign Out' : undefined}
           >
-            <LogOut className="h-4 w-4 mr-2" />
-            Sign Out
+            <LogOut className={cn('h-4 w-4', !isCollapsed && 'mr-2')} />
+            {!isCollapsed && 'Sign Out'}
           </Button>
         </div>
       </div>
@@ -257,8 +369,11 @@ export function Layout({ children }: LayoutProps) {
       )}
 
       {/* Main content */}
-      <div className="lg:pl-64">
-        <main className="p-6">
+      <div className={cn(
+        'transition-all duration-200',
+        isCollapsed ? 'lg:pl-16' : 'lg:pl-64'
+      )}>
+        <main className="p-4 md:p-6 lg:p-8">
           {children}
         </main>
       </div>
