@@ -135,7 +135,7 @@ export async function getEmailStats(): Promise<EmailStats> {
   // Get email logs stats
   const { data: logs, error: logsError } = await supabase
     .from('email_logs')
-    .select('status, sent_at, template_name, recipients, subject')
+    .select('*')
     .order('sent_at', { ascending: false })
     .limit(10)
 
