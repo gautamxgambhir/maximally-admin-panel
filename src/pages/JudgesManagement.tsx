@@ -84,7 +84,7 @@ function SortableJudgeCard({
               className="flex flex-col items-center justify-center bg-muted rounded px-3 py-2 min-w-[60px] cursor-grab active:cursor-grabbing hover:bg-accent transition-colors"
             >
               <GripVertical className="h-5 w-5 text-muted-foreground mb-1" />
-              <span className="text-sm font-bold text-muted-foreground">#{index + 1}</span>
+              <span className="text-sm font-bold text-muted-foreground">#{judge.sort_order}</span>
             </div>
 
             {/* Profile Picture */}
@@ -206,13 +206,51 @@ export function JudgesManagement() {
     judge.company.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
-  const handleDragEnd = (event: DragEndEvent) => {
+  const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event
 
     if (over && active.id !== over.id) {
-      // Just log for now since we don't have display_order in DB
+      // Find the judges being moved
+      const activeJudge = judges.find(j => j.id === active.id)
+      const overJudge = judges.find(j => j.id === over.id)
       
-      // The visual order will reset on refetch since we don't persist it
+      if (!activeJudge || !overJudge) return
+
+      const oldPosition = activeJudge.sort_order
+      const newPosition = overJudge.sort_order
+      
+      // Calculate which judges need to be shifted
+      const updates: { id: number; sort_order: number }[] = []
+      
+      if (newPosition < oldPosition) {
+        // Moving up: shift judges down between newPosition and oldPosition
+        judges.forEach(j => {
+          if (j.id === activeJudge.id) {
+            updates.push({ id: j.id, sort_order: newPosition })
+          } else if (j.sort_order >= newPosition && j.sort_order < oldPosition) {
+            updates.push({ id: j.id, sort_order: j.sort_order + 1 })
+          }
+        })
+      } else {
+        // Moving down: shift judges up between oldPosition and newPosition
+        judges.forEach(j => {
+          if (j.id === activeJudge.id) {
+            updates.push({ id: j.id, sort_order: newPosition })
+          } else if (j.sort_order > oldPosition && j.sort_order <= newPosition) {
+            updates.push({ id: j.id, sort_order: j.sort_order - 1 })
+          }
+        })
+      }
+
+      try {
+        const { updateJudgeSortOrders } = await import('@/lib/judgesApi')
+        await updateJudgeSortOrders(updates)
+        
+        // Refetch to get updated order
+        await refetch()
+      } catch (error) {
+        console.error('Failed to update judge order:', error)
+      }
     }
   }
 
@@ -229,7 +267,17 @@ export function JudgesManagement() {
     if (!editingJudge) return
     
     try {
-      await updateJudge.mutateAsync({ ...data, id: editingJudge.id })
+      // Check if sort_order changed
+      if (data.sort_order !== undefined && data.sort_order !== editingJudge.sort_order) {
+        // Use the reorder function
+        const { updateJudgeWithReorder } = await import('@/lib/judgesApi')
+        await updateJudgeWithReorder({ ...data, id: editingJudge.id })
+        // Refetch to get updated order
+        await refetch()
+      } else {
+        // Normal update
+        await updateJudge.mutateAsync({ ...data, id: editingJudge.id })
+      }
       setEditingJudge(null)
     } catch (error) {
       // Error handling is done in the hook with toast notifications

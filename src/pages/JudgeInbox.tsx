@@ -84,7 +84,9 @@ const JudgeInbox = () => {
       const { data, error } = await supabase
         .from('judges')
         .select('id, username, full_name, tier, judge_location')
-        .eq('is_published', true);
+        .eq('is_published', true)
+        .order('sort_order', { ascending: true })
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
       return data;

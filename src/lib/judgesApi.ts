@@ -6,6 +6,7 @@ export interface Judge {
   role_in_company: string
   company: string
   display_order: number
+  sort_order: number
   created_at: string
   updated_at: string
   username?: string
@@ -23,6 +24,7 @@ export interface JudgeInput {
   role_in_company: string
   company: string
   display_order?: number
+  sort_order?: number
   username?: string
   headline?: string
   location?: string
@@ -42,14 +44,13 @@ export async function getJudges(): Promise<Judge[]> {
   const { data, error } = await supabase
     .from('judges')
     .select('*')
+    .order('sort_order', { ascending: true })
     .order('created_at', { ascending: false })
 
   if (error) {
     console.error('Error fetching judges:', error)
     throw error
   }
-
-
 
   // Map the Supabase response to the expected interface
   const mapped = (data || []).map((judge: any, index: number) => ({
@@ -58,6 +59,7 @@ export async function getJudges(): Promise<Judge[]> {
     role_in_company: judge.role_title || '',
     company: judge.company || '',
     display_order: index + 1, // Generate display order based on position
+    sort_order: judge.sort_order ?? 0,
     created_at: judge.created_at || new Date().toISOString(),
     updated_at: judge.created_at || new Date().toISOString(), // Use created_at since updated_at doesn't exist
     username: judge.username,
@@ -70,7 +72,6 @@ export async function getJudges(): Promise<Judge[]> {
     is_published: judge.is_published
   }))
 
-
   return mapped
 }
 
@@ -79,7 +80,7 @@ export async function getJudges(): Promise<Judge[]> {
 export async function getJudge(id: number): Promise<Judge | null> {
   const { data, error } = await supabase
     .from('judges')
-    .select('id, full_name, role_title, company, created_at, updated_at')
+    .select('id, full_name, role_title, company, sort_order, created_at, updated_at')
     .eq('id', id)
     .maybeSingle()
 
@@ -92,6 +93,7 @@ export async function getJudge(id: number): Promise<Judge | null> {
     role_in_company: data.role_title || '',
     company: data.company || '',
     display_order: 0,
+    sort_order: data.sort_order ?? 0,
     created_at: data.created_at,
     updated_at: data.updated_at
   }
@@ -135,6 +137,7 @@ export async function createJudge(judge: JudgeInput): Promise<Judge> {
     role_in_company: data.role_title,
     company: data.company,
     display_order: 0,
+    sort_order: data.sort_order ?? 0,
     created_at: data.created_at,
     updated_at: data.created_at,
     username: data.username,
@@ -183,6 +186,7 @@ export async function updateJudge(judge: JudgeUpdate): Promise<Judge> {
     role_in_company: data.role_title,
     company: data.company,
     display_order: 0,
+    sort_order: data.sort_order ?? 0,
     created_at: data.created_at,
     updated_at: data.created_at,
     username: data.username,
@@ -212,13 +216,66 @@ export async function deleteJudge(id: number): Promise<void> {
 }
 
 
-// Reorder judges - Note: display_order column doesn't exist in judges table
-// This function is kept for compatibility but doesn't actually update anything
-export async function reorderJudges(updates: { id: number; display_order: number }[]): Promise<void> {
-  // Since display_order doesn't exist in the judges table, this is a no-op
-  // The order is managed in the UI state only
+// Reorder judges - Update sort_order in database
+export async function updateJudgeSortOrders(updates: { id: number; sort_order: number }[]): Promise<void> {
+  const { error } = await supabase.rpc('update_judge_sort_orders', {
+    updates: updates
+  })
 
-  return Promise.resolve()
+  if (error) {
+    console.error('Error updating judge sort orders:', error)
+    // Fallback: update individually if RPC fails
+    for (const update of updates) {
+      await supabase
+        .from('judges')
+        .update({ sort_order: update.sort_order })
+        .eq('id', update.id)
+    }
+  }
+}
+
+// Update judge with automatic reordering
+export async function updateJudgeWithReorder(judge: JudgeUpdate): Promise<Judge> {
+  // If sort_order is being changed, we need to reorder other judges
+  if (judge.sort_order !== undefined) {
+    // Get all judges to calculate new positions
+    const allJudges = await getJudges()
+    const currentJudge = allJudges.find(j => j.id === judge.id)
+    
+    if (currentJudge && currentJudge.sort_order !== judge.sort_order) {
+      const oldPosition = currentJudge.sort_order
+      const newPosition = judge.sort_order
+      
+      // Calculate which judges need to be shifted
+      const updates: { id: number; sort_order: number }[] = []
+      
+      if (newPosition < oldPosition) {
+        // Moving up: shift judges down between newPosition and oldPosition
+        allJudges.forEach(j => {
+          if (j.id === judge.id) {
+            updates.push({ id: j.id, sort_order: newPosition })
+          } else if (j.sort_order >= newPosition && j.sort_order < oldPosition) {
+            updates.push({ id: j.id, sort_order: j.sort_order + 1 })
+          }
+        })
+      } else {
+        // Moving down: shift judges up between oldPosition and newPosition
+        allJudges.forEach(j => {
+          if (j.id === judge.id) {
+            updates.push({ id: j.id, sort_order: newPosition })
+          } else if (j.sort_order > oldPosition && j.sort_order <= newPosition) {
+            updates.push({ id: j.id, sort_order: j.sort_order - 1 })
+          }
+        })
+      }
+      
+      // Apply all updates
+      await updateJudgeSortOrders(updates)
+    }
+  }
+  
+  // Now update the judge with all other fields
+  return updateJudge(judge)
 }
 
 // Get judges count

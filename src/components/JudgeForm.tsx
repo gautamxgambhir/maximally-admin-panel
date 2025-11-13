@@ -13,7 +13,7 @@ const judgeSchema = z.object({
   name: z.string().min(1, 'Name is required').max(255, 'Name is too long'),
   role_in_company: z.string().min(1, 'Role is required').max(255, 'Role is too long'),
   company: z.string().min(1, 'Company is required').max(255, 'Company name is too long'),
-  display_order: z.number().int().min(0).optional(),
+  sort_order: z.number().int().min(0).optional(),
   username: z.string().optional(),
   headline: z.string().optional(),
   location: z.string().optional(),
@@ -51,7 +51,7 @@ export function JudgeForm({
       name: judge?.name || '',
       role_in_company: judge?.role_in_company || '',
       company: judge?.company || '',
-      display_order: judge?.display_order || 0,
+      sort_order: judge?.sort_order ?? 0,
       username: judge?.username || '',
       headline: judge?.headline || '',
       location: judge?.location || '',
@@ -156,15 +156,18 @@ export function JudgeForm({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="display_order">Display Order</Label>
+          <Label htmlFor="sort_order">Display Order</Label>
           <Input
-            id="display_order"
+            id="sort_order"
             type="number"
             min="0"
-            {...register('display_order', { valueAsNumber: true })}
+            {...register('sort_order', { valueAsNumber: true })}
             placeholder="0"
-            className={errors.display_order ? 'border-red-500' : ''}
+            className={errors.sort_order ? 'border-red-500' : ''}
           />
+          <p className="text-xs text-muted-foreground">
+            Position in the judges list (0 = first). Other judges will automatically shift when you change this.
+          </p>
         </div>
 
         <div className="space-y-2">

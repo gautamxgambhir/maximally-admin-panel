@@ -41,11 +41,31 @@ ALTER TABLE email_templates ENABLE ROW LEVEL SECURITY;
 ALTER TABLE email_logs ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies
-CREATE POLICY "Admin full access to email_templates" ON email_templates
-  FOR ALL USING (auth.role() = 'authenticated');
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies 
+    WHERE schemaname = 'public' 
+    AND tablename = 'email_templates' 
+    AND policyname = 'Admin full access to email_templates'
+  ) THEN
+    CREATE POLICY "Admin full access to email_templates" ON email_templates
+      FOR ALL USING (auth.role() = 'authenticated');
+  END IF;
+END $$;
 
-CREATE POLICY "Admin full access to email_logs" ON email_logs
-  FOR ALL USING (auth.role() = 'authenticated');
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies 
+    WHERE schemaname = 'public' 
+    AND tablename = 'email_logs' 
+    AND policyname = 'Admin full access to email_logs'
+  ) THEN
+    CREATE POLICY "Admin full access to email_logs" ON email_logs
+      FOR ALL USING (auth.role() = 'authenticated');
+  END IF;
+END $$;
 
 -- Function to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_email_template_updated_at()
@@ -57,7 +77,15 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Trigger for updated_at
-CREATE TRIGGER email_templates_updated_at
-  BEFORE UPDATE ON email_templates
-  FOR EACH ROW
-  EXECUTE FUNCTION update_email_template_updated_at();
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_trigger 
+    WHERE tgname = 'email_templates_updated_at'
+  ) THEN
+    CREATE TRIGGER email_templates_updated_at
+      BEFORE UPDATE ON email_templates
+      FOR EACH ROW
+      EXECUTE FUNCTION update_email_template_updated_at();
+  END IF;
+END $$;
