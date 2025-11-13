@@ -112,6 +112,9 @@ export function useEmailStats() {
   return useQuery({
     queryKey: ['email-stats'],
     queryFn: getEmailStats,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: 1,
+    retryDelay: 1000,
   })
 }
 

@@ -13,10 +13,29 @@ const categoryColors: Record<EmailCategory, string> = {
 }
 
 export function EmailStats() {
-  const { data: stats, isLoading } = useEmailStats()
+  const { data: stats, isLoading, error } = useEmailStats()
 
   if (isLoading) {
-    return <div className="text-center py-8">Loading stats...</div>
+    return (
+      <div className="text-center py-8">
+        <div className="animate-pulse">Loading stats...</div>
+        <p className="text-xs text-muted-foreground mt-2">This may take a moment</p>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardContent className="py-8">
+          <div className="text-center text-muted-foreground">
+            <XCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
+            <p className="font-medium">Failed to load stats</p>
+            <p className="text-sm mt-2">Please try refreshing the page</p>
+          </div>
+        </CardContent>
+      </Card>
+    )
   }
 
   if (!stats) {

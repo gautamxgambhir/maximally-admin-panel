@@ -183,17 +183,17 @@ export function Dashboard() {
             <Plus className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="flex flex-col gap-2">
-              <Button asChild size="sm" className="w-full justify-start">
+            <div className="flex flex-col gap-2 min-h-[80px]">
+              <Button asChild size="sm" className="w-full justify-start text-xs">
                 <Link to="/blogs/create">
-                  <FileText className="mr-2 h-4 w-4" />
-                  Create Blog
+                  <FileText className="mr-2 h-4 w-4 flex-shrink-0" />
+                  <span className="truncate">Create Blog</span>
                 </Link>
               </Button>
-              <Button asChild size="sm" variant="outline" className="w-full justify-start">
+              <Button asChild size="sm" variant="outline" className="w-full justify-start text-xs">
                 <Link to="/hackathons/create">
-                  <Trophy className="mr-2 h-4 w-4" />
-                  Create Hackathon
+                  <Trophy className="mr-2 h-4 w-4 flex-shrink-0" />
+                  <span className="truncate">Create Hackathon</span>
                 </Link>
               </Button>
             </div>

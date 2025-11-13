@@ -37,25 +37,24 @@ export function Layout({ children }: LayoutProps) {
   const location = useLocation()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isCollapsed, setIsCollapsed] = useState(false)
-  const [expandedCategories, setExpandedCategories] = useState<string[]>(['content', 'events', 'people', 'communication'])
+  const [expandedCategories, setExpandedCategories] = useState<string[]>([])
   const [isRefreshing, setIsRefreshing] = useState(false)
   const queryClient = useQueryClient()
 
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
     setIsRefreshing(true)
     
-    // Invalidate queries without waiting (fire and forget)
-    queryClient.invalidateQueries({ refetchType: 'active' }).catch((error) => {
+    try {
+      // Invalidate queries with a slight delay to prevent UI freeze
+      await new Promise(resolve => setTimeout(resolve, 100))
+      await queryClient.invalidateQueries({ refetchType: 'active' })
+      toast.success('Data refreshed successfully')
+    } catch (error) {
       console.error('Refresh error:', error)
-    })
-    
-    // Show success message and reset state
-    toast.success('Refreshing data...')
-    
-    // Always reset the button state after a short delay
-    setTimeout(() => {
+      toast.error('Failed to refresh data')
+    } finally {
       setIsRefreshing(false)
-    }, 800)
+    }
   }
 
   const handleSignOut = async () => {
@@ -141,7 +140,7 @@ export function Layout({ children }: LayoutProps) {
           icon: Mail,
         },
         {
-          name: 'Judge Verification',
+          name: 'Judge Events Verification',
           href: '/judge-events-verification',
           icon: UserCheck,
         },
@@ -297,7 +296,7 @@ export function Layout({ children }: LayoutProps) {
         </div>
         
         {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto p-2">
+        <nav className="flex-1 overflow-y-scroll p-2 nav-scrollbar max-h-[calc(100vh-200px)]">
           {navigationCategories.map((category) => (
             <div key={category.id} className="mb-2">
               {/* Category Header */}

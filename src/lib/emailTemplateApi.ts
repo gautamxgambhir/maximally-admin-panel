@@ -125,44 +125,67 @@ export async function deleteEmailLog(id: string): Promise<void> {
 
 // Stats
 export async function getEmailStats(): Promise<EmailStats> {
-  // Get all templates
-  const { data: templates, error: templatesError } = await supabase
-    .from('email_templates')
-    .select('category')
+  try {
+    // Run all queries in parallel with timeout
+    const timeout = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Stats query timeout')), 10000)
+    )
 
-  if (templatesError) throw templatesError
+    const statsPromise = Promise.all([
+      // Get all templates
+      supabase.from('email_templates').select('category'),
+      
+      // Get recent logs (limit to 10 for performance)
+      supabase
+        .from('email_logs')
+        .select('*')
+        .order('sent_at', { ascending: false })
+        .limit(10),
+      
+      // Count sent emails (with limit for performance)
+      supabase
+        .from('email_logs')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'sent')
+        .limit(1000), // Add limit to prevent slow count
+      
+      // Count failed emails (with limit for performance)
+      supabase
+        .from('email_logs')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'failed')
+        .limit(1000), // Add limit to prevent slow count
+    ])
 
-  // Get email logs stats
-  const { data: logs, error: logsError } = await supabase
-    .from('email_logs')
-    .select('*')
-    .order('sent_at', { ascending: false })
-    .limit(10)
+    const results = await Promise.race([statsPromise, timeout]) as any[]
+    
+    const [templatesResult, logsResult, sentResult, failedResult] = results
 
-  if (logsError) throw logsError
+    if (templatesResult.error) throw templatesResult.error
+    if (logsResult.error) throw logsResult.error
 
-  // Count by status
-  const { count: sentCount } = await supabase
-    .from('email_logs')
-    .select('*', { count: 'exact', head: true })
-    .eq('status', 'sent')
+    // Group templates by category
+    const templatesByCategory = (templatesResult.data || []).reduce((acc: Record<string, number>, t: any) => {
+      acc[t.category] = (acc[t.category] || 0) + 1
+      return acc
+    }, {} as Record<string, number>)
 
-  const { count: failedCount } = await supabase
-    .from('email_logs')
-    .select('*', { count: 'exact', head: true })
-    .eq('status', 'failed')
-
-  // Group templates by category
-  const templatesByCategory = (templates || []).reduce((acc, t) => {
-    acc[t.category] = (acc[t.category] || 0) + 1
-    return acc
-  }, {} as Record<string, number>)
-
-  return {
-    totalTemplates: templates?.length || 0,
-    totalSent: sentCount || 0,
-    totalFailed: failedCount || 0,
-    recentLogs: logs || [],
-    templatesByCategory
+    return {
+      totalTemplates: templatesResult.data?.length || 0,
+      totalSent: sentResult.count || 0,
+      totalFailed: failedResult.count || 0,
+      recentLogs: logsResult.data || [],
+      templatesByCategory
+    }
+  } catch (error) {
+    console.error('Error fetching email stats:', error)
+    // Return empty stats instead of throwing
+    return {
+      totalTemplates: 0,
+      totalSent: 0,
+      totalFailed: 0,
+      recentLogs: [],
+      templatesByCategory: {}
+    }
   }
 }

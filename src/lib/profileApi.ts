@@ -179,13 +179,8 @@ export async function removeAdminRole(userId: string): Promise<ProfileApiResult<
  */
 export async function toggleAdminRole(email: string): Promise<ProfileApiResult<{ profile: Profile; isNowAdmin: boolean }>> {
   try {
-    
-    
-    // First get the current profile
+    // Get the current profile using the standard function
     const { data: profile, error: getError } = await getProfileByEmail(email)
-    
-    
-    
     
     if (getError) {
       return { data: null, error: getError }
@@ -198,30 +193,16 @@ export async function toggleAdminRole(email: string): Promise<ProfileApiResult<{
     // Toggle the role
     const newRole: UserRole = profile.role === 'admin' ? 'user' : 'admin'
     
-    
-    
-    // Try direct update instead of using updateUserRole
-    const { data: updateResult, error: updateError } = await supabase
-      .from('profiles')
-      .update({ role: newRole })
-      .eq('email', email)
-      .select()
-      .single()
-    
-    
-    
+    // Update using the standard updateUserRole function
+    const { data: updateResult, error: updateError } = await updateUserRole(profile.id, newRole)
     
     if (updateError) {
-      console.error('Update failed with error:', updateError)
       return { data: null, error: updateError }
     }
 
     if (!updateResult) {
-      console.error('No data returned from update')
       return { data: null, error: { message: 'Update failed - no data returned' } }
     }
-
-    
 
     return { 
       data: { 

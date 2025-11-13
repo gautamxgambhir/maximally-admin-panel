@@ -28,7 +28,17 @@ function replacePlaceholders(text: string, placeholders: Record<string, string>)
 }
 
 function emailHtml(body: string): string {
-  // Convert plain text to HTML with basic formatting
+  // Check if body already contains HTML (starts with <!DOCTYPE or <html)
+  const trimmedBody = body.trim().toLowerCase()
+  const isHtml = trimmedBody.startsWith('<!doctype') || 
+                 trimmedBody.startsWith('<html')
+  
+  // If it's already HTML, return trimmed version
+  if (isHtml) {
+    return body.trim()
+  }
+  
+  // Otherwise, convert plain text to HTML with basic formatting
   const htmlBody = body
     .split('\n\n')
     .map(para => `<p>${para.replace(/\n/g, '<br/>')}</p>`)
