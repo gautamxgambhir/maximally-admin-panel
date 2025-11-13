@@ -164,11 +164,17 @@ export async function getEmailStats(): Promise<EmailStats> {
     if (templatesResult.error) throw templatesResult.error
     if (logsResult.error) throw logsResult.error
 
-    // Group templates by category
+    // Group templates by category with all categories initialized
     const templatesByCategory = (templatesResult.data || []).reduce((acc: Record<string, number>, t: any) => {
       acc[t.category] = (acc[t.category] || 0) + 1
       return acc
-    }, {} as Record<string, number>)
+    }, {
+      custom: 0,
+      judges: 0,
+      sponsors: 0,
+      participants: 0,
+      general: 0
+    } as Record<string, number>)
 
     return {
       totalTemplates: templatesResult.data?.length || 0,
@@ -185,7 +191,13 @@ export async function getEmailStats(): Promise<EmailStats> {
       totalSent: 0,
       totalFailed: 0,
       recentLogs: [],
-      templatesByCategory: {}
+      templatesByCategory: {
+        custom: 0,
+        judges: 0,
+        sponsors: 0,
+        participants: 0,
+        general: 0
+      }
     }
   }
 }
