@@ -15,6 +15,10 @@ import JudgeInbox from './pages/JudgeInbox'
 import { JudgeEventsVerification } from './pages/JudgeEventsVerification'
 import { Certificates } from './pages/Certificates'
 import { EmailGenerator } from './pages/EmailGenerator'
+import { OrganizerHackathonRequests } from './pages/OrganizerHackathonRequests'
+import { OrganizerManagement } from './pages/OrganizerManagement'
+// import { NotificationsManagement } from './pages/NotificationsManagement' // REMOVED - Notification system disabled
+import HackathonEditRequests from './pages/HackathonEditRequests'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { Layout } from './components/Layout'
 
@@ -173,6 +177,47 @@ function App() {
           </ProtectedRoute>
         }
       />
+      <Route
+        path="/organizer-requests"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <OrganizerHackathonRequests />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/edit-requests"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <HackathonEditRequests />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/organizer-management"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <OrganizerManagement />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      {/* Notifications route - DISABLED */}
+      {/* <Route
+        path="/notifications"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <NotificationsManagement />
+            </Layout>
+          </ProtectedRoute>
+        }
+      /> */}
     </Routes>
   )
 }

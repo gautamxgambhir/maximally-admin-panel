@@ -14,6 +14,7 @@ import {
   Scale,
   Award,
   Mail,
+  Bell,
   Moon,
   Sun,
   RefreshCw,
@@ -109,6 +110,16 @@ export function Layout({ children }: LayoutProps) {
           icon: Plus,
         },
         {
+          name: 'Organizer Requests',
+          href: '/organizer-requests',
+          icon: UserCheck,
+        },
+        {
+          name: 'Edit Requests',
+          href: '/edit-requests',
+          icon: RefreshCw,
+        },
+        {
           name: 'Certificates',
           href: '/certificates',
           icon: Award,
@@ -150,6 +161,12 @@ export function Layout({ children }: LayoutProps) {
       id: 'communication',
       name: 'Communication',
       items: [
+        // Notifications - DISABLED
+        // {
+        //   name: 'Notifications',
+        //   href: '/notifications',
+        //   icon: Bell,
+        // },
         {
           name: 'Email Generator',
           href: '/email-generator',
@@ -165,6 +182,11 @@ export function Layout({ children }: LayoutProps) {
           name: 'Admin Management',
           href: '/admin-management',
           icon: Users,
+        },
+        {
+          name: 'Organizer Management',
+          href: '/organizer-management',
+          icon: UserCheck,
         },
       ]
     },
