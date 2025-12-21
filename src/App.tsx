@@ -11,14 +11,19 @@ import { AdminManagement } from './pages/AdminManagement'
 import { PeopleManagement } from './pages/PeopleManagement'
 import { JudgesManagement } from './pages/JudgesManagement'
 import JudgeApplications from './pages/JudgeApplications'
+import OrganizerApplications from './pages/OrganizerApplications'
 import JudgeInbox from './pages/JudgeInbox'
 import { JudgeEventsVerification } from './pages/JudgeEventsVerification'
 import { Certificates } from './pages/Certificates'
 import { EmailGenerator } from './pages/EmailGenerator'
 import { OrganizerHackathonRequests } from './pages/OrganizerHackathonRequests'
-import { OrganizerManagement } from './pages/OrganizerManagement'
+import { OrganizersManagement } from './pages/OrganizersManagement'
+import OrganizerInbox from './pages/OrganizerInbox'
 // import { NotificationsManagement } from './pages/NotificationsManagement' // REMOVED - Notification system disabled
 import HackathonEditRequests from './pages/HackathonEditRequests'
+import UserReports from './pages/UserReports'
+import UserModeration from './pages/UserModeration'
+import ProjectGalleryModeration from './pages/ProjectGalleryModeration'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { Layout } from './components/Layout'
 
@@ -138,6 +143,16 @@ function App() {
         }
       />
       <Route
+        path="/organizer-applications"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <OrganizerApplications />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/judge-inbox"
         element={
           <ProtectedRoute>
@@ -198,11 +213,21 @@ function App() {
         }
       />
       <Route
-        path="/organizer-management"
+        path="/organizers"
         element={
           <ProtectedRoute>
             <Layout>
-              <OrganizerManagement />
+              <OrganizersManagement />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/organizer-inbox"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <OrganizerInbox />
             </Layout>
           </ProtectedRoute>
         }
@@ -218,6 +243,36 @@ function App() {
           </ProtectedRoute>
         }
       /> */}
+      <Route
+        path="/user-reports"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <UserReports />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/user-moderation"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <UserModeration />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/project-gallery"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <ProjectGalleryModeration />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
     </Routes>
   )
 }

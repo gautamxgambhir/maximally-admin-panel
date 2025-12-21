@@ -149,14 +149,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Small delay to ensure cleanup completes
       await new Promise(resolve => setTimeout(resolve, 200))
       
-      // Add timeout to sign in request
+      // Add timeout to sign in request (increased to 30 seconds)
       const signInPromise = supabase.auth.signInWithPassword({ 
         email, 
         password 
       })
       
       const signInTimeout = new Promise<any>((_, reject) => 
-        setTimeout(() => reject(new Error('Sign in timed out after 15 seconds')), 15000)
+        setTimeout(() => reject(new Error('Sign in timed out after 30 seconds. Please check your connection and try again.')), 30000)
       )
       
       let result

@@ -20,7 +20,10 @@ import {
   RefreshCw,
   ChevronDown,
   ChevronRight,
-  X
+  X,
+  Flag,
+  Shield,
+  Rocket
 } from 'lucide-react'
 import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
@@ -110,6 +113,11 @@ export function Layout({ children }: LayoutProps) {
           icon: Plus,
         },
         {
+          name: 'Organizer Applications',
+          href: '/organizer-applications',
+          icon: UserCheck,
+        },
+        {
           name: 'Organizer Requests',
           href: '/organizer-requests',
           icon: UserCheck,
@@ -155,6 +163,37 @@ export function Layout({ children }: LayoutProps) {
           href: '/judge-events-verification',
           icon: UserCheck,
         },
+        {
+          name: 'Organizers',
+          href: '/organizers',
+          icon: Users,
+        },
+        {
+          name: 'Organizer Inbox',
+          href: '/organizer-inbox',
+          icon: Mail,
+        },
+      ]
+    },
+    {
+      id: 'moderation',
+      name: 'Moderation',
+      items: [
+        {
+          name: 'User Reports',
+          href: '/user-reports',
+          icon: Flag,
+        },
+        {
+          name: 'User Moderation',
+          href: '/user-moderation',
+          icon: Shield,
+        },
+        {
+          name: 'Project Gallery',
+          href: '/project-gallery',
+          icon: Rocket,
+        },
       ]
     },
     {
@@ -182,11 +221,6 @@ export function Layout({ children }: LayoutProps) {
           name: 'Admin Management',
           href: '/admin-management',
           icon: Users,
-        },
-        {
-          name: 'Organizer Management',
-          href: '/organizer-management',
-          icon: UserCheck,
         },
       ]
     },

@@ -33,3 +33,12 @@ export const supabase = createClient(supabaseUrl, supabaseKey, {
 })
 
 // Using anon key for proper authentication flow
+
+// Create a separate admin client with service role key for admin operations that need to bypass RLS
+// WARNING: This bypasses ALL RLS policies - use with extreme caution
+export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey || supabaseAnonKey, {
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false
+  }
+})

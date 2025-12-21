@@ -224,16 +224,7 @@
   font-size: 1rem;
 }
 
-/* First letter styling for better typography */
-.maximally-blog-content p:first-of-type::first-letter {
-  font-size: 2rem;
-  line-height: 1;
-  float: left;
-  margin-right: 0.5rem;
-  margin-top: 0.1rem;
-  font-family: 'Press Start 2P', monospace;
-  color: var(--maximally-red);
-}
+/* Drop cap styling removed - using normal text flow */
 
 .maximally-blog-content strong {
   font-family: 'Press Start 2P', monospace;
