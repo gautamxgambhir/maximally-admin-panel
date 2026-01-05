@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { CheckCircle, XCircle, Trash2, Eye, Clock, Calendar } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { ConfirmModal } from '@/components/ConfirmModal';
 import { InputModal } from '@/components/InputModal';
@@ -45,7 +45,7 @@ export default function HackathonEditRequests() {
 
   const fetchRequests = async () => {
     try {
-      const { data: editRequests, error } = await supabase
+      const { data: editRequests, error } = await supabaseAdmin
         .from('hackathon_edit_requests')
         .select('*')
         .order('created_at', { ascending: false });
@@ -55,7 +55,7 @@ export default function HackathonEditRequests() {
       // Fetch hackathon details for each request
       const requestsWithHackathons = await Promise.all(
         (editRequests || []).map(async (request) => {
-          const { data: hackathon } = await supabase
+          const { data: hackathon } = await supabaseAdmin
             .from('organizer_hackathons')
             .select('hackathon_name, slug, status')
             .eq('id', request.hackathon_id)
@@ -88,7 +88,7 @@ export default function HackathonEditRequests() {
     setActionLoading(true);
     try {
       // Get the edit request
-      const { data: editRequest, error: fetchError } = await supabase
+      const { data: editRequest, error: fetchError } = await supabaseAdmin
         .from('hackathon_edit_requests')
         .select('*')
         .eq('id', pendingAction.id)
@@ -97,7 +97,7 @@ export default function HackathonEditRequests() {
       if (fetchError) throw fetchError;
 
       // Apply changes to hackathon
-      const { error: updateError } = await supabase
+      const { error: updateError } = await supabaseAdmin
         .from('organizer_hackathons')
         .update({
           ...editRequest.requested_changes,
@@ -108,7 +108,7 @@ export default function HackathonEditRequests() {
       if (updateError) throw updateError;
 
       // Update edit request status
-      const { error: statusError } = await supabase
+      const { error: statusError } = await supabaseAdmin
         .from('hackathon_edit_requests')
         .update({
           status: 'approved',
@@ -152,7 +152,7 @@ export default function HackathonEditRequests() {
 
     setActionLoading(true);
     try {
-      const { error } = await supabase
+      const { error } = await supabaseAdmin
         .from('hackathon_edit_requests')
         .update({
           status: 'rejected',
@@ -188,7 +188,7 @@ export default function HackathonEditRequests() {
 
     setActionLoading(true);
     try {
-      const { error } = await supabase
+      const { error } = await supabaseAdmin
         .from('hackathon_edit_requests')
         .delete()
         .eq('id', selectedRequest.id);

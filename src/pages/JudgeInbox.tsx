@@ -23,7 +23,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase';
 import { toast } from 'sonner';
 
 interface JudgeMessage {
@@ -67,7 +67,7 @@ const JudgeInbox = () => {
   const { data: messages = [], isLoading } = useQuery({
     queryKey: ['judge-messages'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await supabaseAdmin
         .from('judge_messages')
         .select('*')
         .order('created_at', { ascending: false });
@@ -81,7 +81,7 @@ const JudgeInbox = () => {
   const { data: judges = [] } = useQuery({
     queryKey: ['judges-list'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await supabaseAdmin
         .from('judges')
         .select('id, username, full_name, tier, judge_location')
         .eq('is_published', true)
@@ -96,17 +96,17 @@ const JudgeInbox = () => {
   // Create/Send message mutation
   const sendMessageMutation = useMutation({
     mutationFn: async (isDraft: boolean) => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user } } = await supabaseAdmin.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
-      const { data: profile } = await supabase
+      const { data: profile } = await supabaseAdmin
         .from('profiles')
         .select('*')
         .eq('id', user.id)
         .single();
 
       // Create message
-      const { data: newMessage, error: insertError } = await supabase
+      const { data: newMessage, error: insertError } = await supabaseAdmin
         .from('judge_messages')
         .insert({
           subject,
@@ -126,7 +126,7 @@ const JudgeInbox = () => {
 
       // If sending (not draft), call the send function
       if (!isDraft) {
-        const { data: sendResult, error: sendError } = await supabase
+        const { data: sendResult, error: sendError } = await supabaseAdmin
           .rpc('send_message_to_judges', {
             message_id_param: newMessage.id
           });
@@ -156,7 +156,7 @@ const JudgeInbox = () => {
   // Update message mutation
   const updateMessageMutation = useMutation({
     mutationFn: async ({ messageId, updates }: { messageId: number; updates: any }) => {
-      const { error } = await supabase
+      const { error } = await supabaseAdmin
         .from('judge_messages')
         .update(updates)
         .eq('id', messageId);
@@ -177,7 +177,7 @@ const JudgeInbox = () => {
   // Delete message mutation
   const deleteMessageMutation = useMutation({
     mutationFn: async (messageId: number) => {
-      const { error } = await supabase
+      const { error } = await supabaseAdmin
         .from('judge_messages')
         .delete()
         .eq('id', messageId);

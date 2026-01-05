@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -43,7 +43,7 @@ export function JudgeEventsVerification() {
   const { data: events = [], isLoading } = useQuery({
     queryKey: ['judge-events-verification'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await supabaseAdmin
         .from('judge_events')
         .select(`
           *,
@@ -65,7 +65,7 @@ export function JudgeEventsVerification() {
   // Verify event mutation
   const verifyEventMutation = useMutation({
     mutationFn: async (eventId: number) => {
-      const { error } = await supabase
+      const { error } = await supabaseAdmin
         .from('judge_events')
         .update({ verified: true })
         .eq('id', eventId);
@@ -84,7 +84,7 @@ export function JudgeEventsVerification() {
   // Unverify event mutation
   const unverifyEventMutation = useMutation({
     mutationFn: async (eventId: number) => {
-      const { error } = await supabase
+      const { error } = await supabaseAdmin
         .from('judge_events')
         .update({ verified: false })
         .eq('id', eventId);
@@ -103,7 +103,7 @@ export function JudgeEventsVerification() {
   // Delete event mutation
   const deleteEventMutation = useMutation({
     mutationFn: async (eventId: number) => {
-      const { error } = await supabase
+      const { error } = await supabaseAdmin
         .from('judge_events')
         .delete()
         .eq('id', eventId);

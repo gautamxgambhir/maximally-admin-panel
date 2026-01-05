@@ -26,7 +26,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { supabase } from '@/lib/supabase';
+import { supabase, supabaseAdmin } from '@/lib/supabase';
 import { toast } from 'sonner';
 
 // Auth utility function for admin panel
@@ -119,7 +119,7 @@ const JudgeApplications = () => {
       try {
         
 
-        const { data, error } = await supabase
+        const { data, error } = await supabaseAdmin
           .from('judge_applications')
           .select(`
             *,
@@ -151,7 +151,7 @@ const JudgeApplications = () => {
       const applicationId = parseInt(id, 10);
       
       // Use the database function for atomic approval
-      const { data, error } = await supabase.rpc('approve_judge_application', {
+      const { data, error } = await supabaseAdmin.rpc('approve_judge_application', {
         application_id_param: applicationId,
         tier_param: tier
       });
@@ -182,7 +182,7 @@ const JudgeApplications = () => {
       
       
       // Use the database function for rejection
-      const { data, error } = await supabase.rpc('reject_judge_application', {
+      const { data, error } = await supabaseAdmin.rpc('reject_judge_application', {
         application_id_param: parseInt(id, 10),
         rejection_reason_param: reason
       });
@@ -213,7 +213,7 @@ const JudgeApplications = () => {
       
       
       // Use the database function for deletion
-      const { data, error } = await supabase.rpc('delete_judge_application', {
+      const { data, error } = await supabaseAdmin.rpc('delete_judge_application', {
         application_id_param: parseInt(id, 10)
       });
 

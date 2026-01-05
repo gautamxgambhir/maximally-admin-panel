@@ -229,7 +229,7 @@ export function OrganizersManagement() {
     queryKey: ['organizers-management'],
     queryFn: async () => {
       // Get all organizer profiles with user data
-      const { data: profiles, error: profilesError } = await supabase
+      const { data: profiles, error: profilesError } = await supabaseAdmin
         .from('profiles')
         .select('id, username, full_name, email, role, created_at')
         .eq('role', 'organizer')
@@ -239,7 +239,7 @@ export function OrganizersManagement() {
 
       // Get organizer profile data
       const userIds = (profiles || []).map((p: any) => p.id)
-      const { data: orgProfiles, error: orgError } = await supabase
+      const { data: orgProfiles, error: orgError } = await supabaseAdmin
         .from('organizer_profiles')
         .select('*')
         .in('user_id', userIds)

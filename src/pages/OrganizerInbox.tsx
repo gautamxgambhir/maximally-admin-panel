@@ -19,7 +19,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase';
 import { toast } from 'sonner';
 
 interface OrganizerMessage {
@@ -62,7 +62,7 @@ const OrganizerInbox = () => {
   const { data: messages = [], isLoading, error: messagesError } = useQuery({
     queryKey: ['organizer-messages'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await supabaseAdmin
         .from('organizer_messages')
         .select('*')
         .order('created_at', { ascending: false });
@@ -84,7 +84,7 @@ const OrganizerInbox = () => {
   const { data: organizers = [] } = useQuery({
     queryKey: ['organizers-list'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await supabaseAdmin
         .from('profiles')
         .select('id, username, full_name, role')
         .eq('role', 'organizer')
@@ -94,17 +94,17 @@ const OrganizerInbox = () => {
       
       // Get tier info from organizer_profiles
       const userIds = data.map((p: any) => p.id);
-      const { data: profiles } = await supabase
+      const { data: profiles } = await supabaseAdmin
         .from('organizer_profiles')
         .select('user_id, tier, location')
         .in('user_id', userIds);
       
-      const profileMap = new Map((profiles || []).map((p: any) => [p.user_id, p]));
+      const profileMap = new Map((profiles || []).map((p: any) => [p.user_id, p as { tier: string; location: string }]));
       
       return data.map((p: any) => ({
         ...p,
-        tier: profileMap.get(p.id)?.tier || 'starter',
-        location: profileMap.get(p.id)?.location
+        tier: (profileMap.get(p.id) as any)?.tier || 'starter',
+        location: (profileMap.get(p.id) as any)?.location
       }));
     }
   });
@@ -112,16 +112,16 @@ const OrganizerInbox = () => {
   // Create/Send message mutation
   const sendMessageMutation = useMutation({
     mutationFn: async (isDraft: boolean) => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user } } = await supabaseAdmin.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
-      const { data: profile } = await supabase
+      const { data: profile } = await supabaseAdmin
         .from('profiles')
         .select('*')
         .eq('id', user.id)
         .single();
 
-      const { data: newMessage, error: insertError } = await supabase
+      const { data: newMessage, error: insertError } = await supabaseAdmin
         .from('organizer_messages')
         .insert({
           subject,
@@ -140,7 +140,7 @@ const OrganizerInbox = () => {
       if (insertError) throw insertError;
 
       if (!isDraft) {
-        const { data: sendResult, error: sendError } = await supabase
+        const { data: sendResult, error: sendError } = await supabaseAdmin
           .rpc('send_message_to_organizers', {
             message_id_param: newMessage.id
           });
@@ -165,7 +165,7 @@ const OrganizerInbox = () => {
   // Update message mutation
   const updateMessageMutation = useMutation({
     mutationFn: async ({ messageId, updates }: { messageId: number; updates: any }) => {
-      const { error } = await supabase
+      const { error } = await supabaseAdmin
         .from('organizer_messages')
         .update(updates)
         .eq('id', messageId);
@@ -186,7 +186,7 @@ const OrganizerInbox = () => {
   // Send draft message mutation
   const sendDraftMutation = useMutation({
     mutationFn: async (messageId: number) => {
-      const { data: sendResult, error: sendError } = await supabase
+      const { data: sendResult, error: sendError } = await supabaseAdmin
         .rpc('send_message_to_organizers', {
           message_id_param: messageId
         });
@@ -207,7 +207,7 @@ const OrganizerInbox = () => {
   // Delete message mutation
   const deleteMessageMutation = useMutation({
     mutationFn: async (messageId: number) => {
-      const { error } = await supabase
+      const { error } = await supabaseAdmin
         .from('organizer_messages')
         .delete()
         .eq('id', messageId);
