@@ -1,4 +1,5 @@
 import { supabase } from './supabase'
+import { supabaseAdmin } from './supabase'
 import type { Profile, UserRole } from '@/types/profile'
 
 export interface ProfileApiResult<T = any> {
@@ -7,23 +8,18 @@ export interface ProfileApiResult<T = any> {
 }
 
 /**
- * Get user profile by user ID
+ * Get user profile by user ID (uses admin client to bypass RLS for auth checks)
  */
 export async function getProfile(userId: string): Promise<ProfileApiResult<Profile>> {
   try {
-    
-    
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('profiles')
       .select('*')
       .eq('id', userId)
       .maybeSingle()
 
-    
-
     return { data, error }
   } catch (error) {
-    
     return { data: null, error }
   }
 }

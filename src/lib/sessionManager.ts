@@ -7,7 +7,7 @@ export class SessionManager {
 
   // Check if current session is valid
   static isSessionActive(): boolean {
-    const sessionActive = sessionStorage.getItem(this.SESSION_KEY)
+    const sessionActive = localStorage.getItem(this.SESSION_KEY)
     const lastActivity = localStorage.getItem(this.LAST_ACTIVITY_KEY)
     
     if (!sessionActive || !lastActivity) {
@@ -20,50 +20,25 @@ export class SessionManager {
 
   // Mark session as active (called after successful login)
   static activateSession(): void {
-    sessionStorage.setItem(this.SESSION_KEY, 'true')
+    localStorage.setItem(this.SESSION_KEY, 'true')
     localStorage.setItem(this.LAST_ACTIVITY_KEY, Date.now().toString())
   }
 
   // Update last activity timestamp
   static updateActivity(): void {
-    if (sessionStorage.getItem(this.SESSION_KEY)) {
+    if (localStorage.getItem(this.SESSION_KEY)) {
       localStorage.setItem(this.LAST_ACTIVITY_KEY, Date.now().toString())
     }
   }
 
   // Clear session (called on logout or timeout)
   static async clearSession(): Promise<void> {
-    // Remove session tracking
-    sessionStorage.removeItem(this.SESSION_KEY)
+    // Remove session tracking keys only
+    localStorage.removeItem(this.SESSION_KEY)
     localStorage.removeItem(this.LAST_ACTIVITY_KEY)
     
-    // Clear all other storage
-    localStorage.clear()
-    sessionStorage.clear()
-    
-    // Sign out from Supabase
+    // Sign out from Supabase (this will clear auth storage)
     await supabase.auth.signOut()
-  }
-
-  // Force logout on page load (ensures no persistent sessions)
-  static async forceLogoutOnPageLoad(): Promise<void> {
-    // Check if there's an active session
-    const hasActiveSession = this.isSessionActive();
-    
-    // Only clear if session is expired or doesn't exist
-    if (!hasActiveSession) {
-      await this.clearSession();
-      
-      // Only redirect to login if we're not already there
-      if (window.location.pathname !== '/login') {
-        if (window.history?.replaceState) {
-          window.history.replaceState(null, '', '/login');
-        }
-      }
-    } else {
-      // Session is active, just update activity
-      this.updateActivity();
-    }
   }
 
   // Initialize session timeout checking

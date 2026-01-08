@@ -1,44 +1,46 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient, SupabaseClient } from '@supabase/supabase-js'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://vbjqqspfosgelxhhqlks.supabase.co'
 
 // Use service role key for admin operations (bypasses RLS)
-// Note: This should only be used in admin panel, never in public-facing apps
 const supabaseServiceKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZianFxc3Bmb3NnZWx4aGhxbGtzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc0Mjk2ODYsImV4cCI6MjA3MzAwNTY4Nn0.fpbf1kNT-qI54aaHS0-To3jrRKU91lgwINzHEC_wUis'
 
-// Always use anon key for authentication
-// Service role key bypasses auth and should only be used for server-side admin operations
 const supabaseKey = supabaseAnonKey
 
 if (!supabaseUrl || !supabaseKey) {
   throw new Error('Missing Supabase environment variables')
 }
 
-// Create client with proper auth configuration
+// Main client for authentication
 export const supabase = createClient(supabaseUrl, supabaseKey, {
   auth: {
-    autoRefreshToken: false,
-    persistSession: false, // Don't persist sessions - logout on refresh
+    autoRefreshToken: true,
+    persistSession: true,
     detectSessionInUrl: false,
-    storage: window.sessionStorage, // Use sessionStorage instead of localStorage
-    storageKey: 'maximally-admin-auth',
-    flowType: 'implicit' // Use implicit flow for simpler auth
-  },
-  global: {
-    headers: {
-      'X-Client-Info': 'maximally-admin-panel'
-    }
+    storage: window.localStorage,
+    storageKey: 'maximally-admin-auth'
   }
 })
 
-// Using anon key for proper authentication flow
+// Lazy-loaded admin client to avoid multiple GoTrueClient instances warning
+let _supabaseAdmin: SupabaseClient | null = null
 
-// Create a separate admin client with service role key for admin operations that need to bypass RLS
-// WARNING: This bypasses ALL RLS policies - use with extreme caution
-export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey || supabaseAnonKey, {
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false
+export const supabaseAdmin: SupabaseClient = new Proxy({} as SupabaseClient, {
+  get(_, prop) {
+    if (!_supabaseAdmin) {
+      _supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey || supabaseAnonKey, {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+          storage: {
+            getItem: () => null,
+            setItem: () => {},
+            removeItem: () => {}
+          }
+        }
+      })
+    }
+    return (_supabaseAdmin as any)[prop]
   }
 })
