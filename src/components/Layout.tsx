@@ -32,13 +32,15 @@ import {
   HeartPulse,
   AlertTriangle,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { SystemHealthAlertBanner } from '@/components/SystemHealthAlertBanner'
 import { usePendingQueueCount } from '@/hooks/useQueue'
 import { useSystemHealthSummary } from '@/hooks/useSystemHealth'
+import { useAdminRole } from '@/hooks/useAdminRoles'
+import type { AdminPermission } from '@/types/adminRole'
 
 interface LayoutProps {
   children: React.ReactNode
@@ -60,6 +62,23 @@ export function Layout({ children }: LayoutProps) {
   
   // System health for alert indicators - Requirements 8.3, 12.2
   const { data: systemHealthData } = useSystemHealthSummary()
+
+  // Get current user's admin role and permissions
+  const { data: adminRole } = useAdminRole(user?.id)
+  
+  // Helper to check if user has a specific permission
+  const hasPermission = (permission: AdminPermission): boolean => {
+    if (!adminRole) return false
+    // Super admins have all permissions
+    if (adminRole.role === 'super_admin') return true
+    return adminRole.permissions?.[permission] === true
+  }
+
+  // Check if user is at least a viewer (can see read-only content)
+  const isViewer = adminRole?.role === 'viewer'
+  const isModerator = adminRole?.role === 'moderator' || adminRole?.role === 'admin' || adminRole?.role === 'super_admin'
+  const isAdmin = adminRole?.role === 'admin' || adminRole?.role === 'super_admin'
+  const isSuperAdmin = adminRole?.role === 'super_admin'
 
   const handleRefresh = async () => {
     setIsRefreshing(true)
@@ -86,7 +105,7 @@ export function Layout({ children }: LayoutProps) {
     }
   }
 
-  const navigationCategories = [
+  const navigationCategories = useMemo(() => [
     {
       id: 'overview',
       name: 'Overview',
@@ -96,167 +115,184 @@ export function Layout({ children }: LayoutProps) {
           href: '/dashboard',
           icon: LayoutDashboard,
           showAlert: systemHealthData && systemHealthData.status !== 'healthy',
+          // Everyone can see dashboard
         },
         {
           name: 'Activity Feed',
           href: '/activity',
           icon: Activity,
+          // Everyone can see activity feed
         },
       ]
     },
     {
       id: 'moderation',
       name: 'Moderation',
+      show: hasPermission('can_moderate_users') || hasPermission('can_manage_queue'),
       items: [
         {
           name: 'Moderation Queue',
           href: '/queue',
           icon: ClipboardList,
           badge: pendingQueueCount && pendingQueueCount > 0 ? pendingQueueCount : undefined,
+          requiredPermission: 'can_manage_queue' as AdminPermission,
         },
         {
           name: 'User Reports',
           href: '/user-reports',
           icon: Flag,
+          requiredPermission: 'can_moderate_users' as AdminPermission,
         },
         {
           name: 'User Moderation',
           href: '/user-moderation',
           icon: Shield,
+          requiredPermission: 'can_moderate_users' as AdminPermission,
         },
         {
           name: 'Project Gallery',
           href: '/project-gallery',
           icon: Rocket,
+          requiredPermission: 'can_moderate_users' as AdminPermission,
         },
       ]
     },
     {
       id: 'content',
       name: 'Content',
+      show: hasPermission('can_edit_hackathons'),
       items: [
         {
           name: 'Blogs',
           href: '/blogs',
           icon: FileText,
+          requiredPermission: 'can_edit_hackathons' as AdminPermission,
         },
         {
           name: 'Create Blog',
           href: '/blogs/create',
           icon: Plus,
+          requiredPermission: 'can_edit_hackathons' as AdminPermission,
         },
       ]
     },
     {
       id: 'events',
       name: 'Events',
+      show: hasPermission('can_approve_hackathons') || hasPermission('can_edit_hackathons'),
       items: [
         {
           name: 'Hackathons',
           href: '/hackathons',
           icon: Trophy,
+          requiredPermission: 'can_approve_hackathons' as AdminPermission,
         },
         {
           name: 'Create Hackathon',
           href: '/hackathons/create',
           icon: Plus,
+          requiredPermission: 'can_edit_hackathons' as AdminPermission,
         },
-        // REMOVED - Edit request system deprecated (Platform Simplification - organizers can edit directly)
-        // {
-        //   name: 'Edit Requests',
-        //   href: '/edit-requests',
-        //   icon: RefreshCw,
-        // },
         {
           name: 'Certificates',
           href: '/certificates',
           icon: Award,
+          requiredPermission: 'can_edit_hackathons' as AdminPermission,
         },
       ]
     },
     {
       id: 'people',
       name: 'Organizers',
+      show: hasPermission('can_revoke_organizers') || hasPermission('can_send_announcements'),
       items: [
         {
           name: 'Organizers',
-          href: '/organizers',
+          href: '/organizer-oversight',
           icon: Users,
+          requiredPermission: 'can_revoke_organizers' as AdminPermission,
         },
         {
           name: 'Organizer Applications',
           href: '/organizer-applications',
           icon: UserCheck,
+          requiredPermission: 'can_revoke_organizers' as AdminPermission,
         },
         {
           name: 'Organizer Requests',
           href: '/organizer-requests',
           icon: UserCheck,
+          requiredPermission: 'can_revoke_organizers' as AdminPermission,
         },
         {
           name: 'Organizer Inbox',
           href: '/organizer-inbox',
           icon: Mail,
+          requiredPermission: 'can_send_announcements' as AdminPermission,
         },
       ]
     },
     {
       id: 'analytics',
       name: 'Analytics & Logs',
+      show: hasPermission('can_view_audit_logs') || hasPermission('can_access_analytics'),
       items: [
         {
           name: 'Audit Logs',
           href: '/audit',
           icon: ScrollText,
+          requiredPermission: 'can_view_audit_logs' as AdminPermission,
         },
       ]
     },
     {
       id: 'system',
       name: 'System',
+      show: hasPermission('can_export_data') || isSuperAdmin,
       items: [
         {
           name: 'Data Management',
           href: '/data-management',
           icon: Database,
+          requiredPermission: 'can_export_data' as AdminPermission,
         },
         {
           name: 'System Health',
           href: '/system-health',
           icon: HeartPulse,
           showAlert: systemHealthData && systemHealthData.status !== 'healthy',
+          // Super admin only
+          show: isSuperAdmin,
         },
       ]
     },
     {
       id: 'communication',
       name: 'Communication',
+      show: hasPermission('can_send_announcements'),
       items: [
-        // Notifications - DISABLED
-        // {
-        //   name: 'Notifications',
-        //   href: '/notifications',
-        //   icon: Bell,
-        // },
         {
           name: 'Email Generator',
           href: '/email-generator',
           icon: Mail,
+          requiredPermission: 'can_send_announcements' as AdminPermission,
         },
       ]
     },
     {
       id: 'settings',
       name: 'Settings',
+      show: hasPermission('can_manage_admins'),
       items: [
         {
           name: 'Admin Management',
           href: '/admin-management',
           icon: Users,
+          requiredPermission: 'can_manage_admins' as AdminPermission,
         },
       ]
     },
-  ]
+  ], [systemHealthData, pendingQueueCount, adminRole, isSuperAdmin])
 
   const isActiveRoute = (href: string) => {
     return location.pathname === href
@@ -385,91 +421,109 @@ export function Layout({ children }: LayoutProps) {
         
         {/* Navigation */}
         <nav className="flex-1 overflow-y-scroll p-2 nav-scrollbar max-h-[calc(100vh-200px)]">
-          {navigationCategories.map((category) => (
-            <div key={category.id} className="mb-2">
-              {/* Category Header */}
-              {!isCollapsed && category.id !== 'overview' && (
-                <button
-                  onClick={() => toggleCategory(category.id)}
-                  className="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <span>{category.name}</span>
-                  {expandedCategories.includes(category.id) ? (
-                    <ChevronDown className="h-3 w-3" />
-                  ) : (
-                    <ChevronRight className="h-3 w-3" />
+          {navigationCategories
+            .filter(category => category.show !== false)
+            .map((category) => {
+              // Filter items based on permissions
+              const visibleItems = category.items.filter(item => {
+                // Check item-level show property
+                if ('show' in item && item.show === false) return false
+                // Check required permission
+                if ('requiredPermission' in item && item.requiredPermission) {
+                  return hasPermission(item.requiredPermission as AdminPermission)
+                }
+                return true
+              })
+              
+              // Don't render category if no visible items
+              if (visibleItems.length === 0) return null
+              
+              return (
+                <div key={category.id} className="mb-2">
+                  {/* Category Header */}
+                  {!isCollapsed && category.id !== 'overview' && (
+                    <button
+                      onClick={() => toggleCategory(category.id)}
+                      className="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      <span>{category.name}</span>
+                      {expandedCategories.includes(category.id) ? (
+                        <ChevronDown className="h-3 w-3" />
+                      ) : (
+                        <ChevronRight className="h-3 w-3" />
+                      )}
+                    </button>
                   )}
-                </button>
-              )}
 
-              {/* Category Items */}
-              {(isCollapsed || category.id === 'overview' || expandedCategories.includes(category.id)) && (
-                <div className="space-y-1">
-                  {category.items.map((item) => {
-                    const Icon = item.icon
-                    const itemBadge = 'badge' in item ? item.badge : undefined
-                    const itemShowAlert = 'showAlert' in item ? item.showAlert : false
-                    return (
-                      <Link
-                        key={item.href}
-                        to={item.href}
-                        onClick={() => setIsMobileMenuOpen(false)}
-                        className={cn(
-                          'flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors relative',
-                          isActiveRoute(item.href)
-                            ? 'bg-primary text-primary-foreground'
-                            : 'text-foreground hover:bg-accent hover:text-accent-foreground',
-                          isCollapsed && 'justify-center'
-                        )}
-                        title={isCollapsed ? item.name : undefined}
-                      >
-                        <div className="relative">
-                          <Icon className={cn('h-5 w-5', !isCollapsed && 'mr-3')} />
-                          {/* Alert indicator dot for collapsed state */}
-                          {isCollapsed && itemShowAlert && (
-                            <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-yellow-500 animate-pulse" />
-                          )}
-                          {/* Badge for collapsed state */}
-                          {isCollapsed && itemBadge && (
-                            <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-red-500 text-white text-[10px] flex items-center justify-center">
-                              {itemBadge > 9 ? '9+' : itemBadge}
-                            </span>
-                          )}
-                        </div>
-                        {!isCollapsed && (
-                          <>
-                            <span className="truncate flex-1">{item.name}</span>
-                            {/* Queue count badge - Requirement 6.4 */}
-                            {itemBadge && (
-                              <Badge 
-                                className={cn(
-                                  'ml-2 h-5 px-1.5 text-xs',
-                                  isActiveRoute(item.href)
-                                    ? 'bg-primary-foreground/20 text-primary-foreground'
-                                    : 'bg-red-500 text-white hover:bg-red-600'
+                  {/* Category Items */}
+                  {(isCollapsed || category.id === 'overview' || expandedCategories.includes(category.id)) && (
+                    <div className="space-y-1">
+                      {visibleItems.map((item) => {
+                        const Icon = item.icon
+                        const itemBadge = 'badge' in item ? item.badge : undefined
+                        const itemShowAlert = 'showAlert' in item ? item.showAlert : false
+                        return (
+                          <Link
+                            key={item.href}
+                            to={item.href}
+                            onClick={() => setIsMobileMenuOpen(false)}
+                            className={cn(
+                              'flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors relative',
+                              isActiveRoute(item.href)
+                                ? 'bg-primary text-primary-foreground'
+                                : 'text-foreground hover:bg-accent hover:text-accent-foreground',
+                              isCollapsed && 'justify-center'
+                            )}
+                            title={isCollapsed ? item.name : undefined}
+                          >
+                            <div className="relative">
+                              <Icon className={cn('h-5 w-5', !isCollapsed && 'mr-3')} />
+                              {/* Alert indicator dot for collapsed state */}
+                              {isCollapsed && itemShowAlert && (
+                                <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-yellow-500 animate-pulse" />
+                              )}
+                              {/* Badge for collapsed state */}
+                              {isCollapsed && itemBadge && (
+                                <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-red-500 text-white text-[10px] flex items-center justify-center">
+                                  {itemBadge > 9 ? '9+' : itemBadge}
+                                </span>
+                              )}
+                            </div>
+                            {!isCollapsed && (
+                              <>
+                                <span className="truncate flex-1">{item.name}</span>
+                                {/* Queue count badge - Requirement 6.4 */}
+                                {itemBadge && (
+                                  <Badge 
+                                    className={cn(
+                                      'ml-2 h-5 px-1.5 text-xs',
+                                      isActiveRoute(item.href)
+                                        ? 'bg-primary-foreground/20 text-primary-foreground'
+                                        : 'bg-red-500 text-white hover:bg-red-600'
+                                    )}
+                                  >
+                                    {itemBadge > 99 ? '99+' : itemBadge}
+                                  </Badge>
                                 )}
-                              >
-                                {itemBadge > 99 ? '99+' : itemBadge}
-                              </Badge>
+                                {/* Alert indicator - Requirements 8.3, 12.2 */}
+                                {itemShowAlert && (
+                                  <AlertTriangle className={cn(
+                                    'h-4 w-4 ml-2 animate-pulse',
+                                    isActiveRoute(item.href)
+                                      ? 'text-primary-foreground'
+                                      : 'text-yellow-500'
+                                  )} />
+                                )}
+                              </>
                             )}
-                            {/* Alert indicator - Requirements 8.3, 12.2 */}
-                            {itemShowAlert && (
-                              <AlertTriangle className={cn(
-                                'h-4 w-4 ml-2 animate-pulse',
-                                isActiveRoute(item.href)
-                                  ? 'text-primary-foreground'
-                                  : 'text-yellow-500'
-                              )} />
-                            )}
-                          </>
-                        )}
-                      </Link>
-                    )
-                  })}
+                          </Link>
+                        )
+                      })}
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-          ))}
+              )
+            })}
         </nav>
 
         {/* Footer */}

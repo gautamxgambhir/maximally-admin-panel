@@ -87,24 +87,39 @@ export async function getAdminList(
 ): Promise<AdminListResponse> {
   const offset = (page - 1) * limit;
 
-  // Get admin roles with user info
+  // Get admin roles first
   const { data: admins, error: adminsError, count } = await supabaseAdmin
     .from('admin_roles')
-    .select(`
-      *,
-      profiles:user_id (
-        id,
-        username,
-        full_name,
-        avatar_url
-      )
-    `, { count: 'exact' })
+    .select('*', { count: 'exact' })
     .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1);
 
   if (adminsError) {
     throw new Error(`Failed to get admin list: ${adminsError.message}`);
   }
+
+  // Get profiles separately to avoid foreign key join issues
+  const adminUserIds = admins?.map(a => a.user_id) ?? [];
+  const { data: profiles, error: profilesError } = await supabaseAdmin
+    .from('profiles')
+    .select('id, username, full_name, avatar_url')
+    .in('id', adminUserIds);
+
+  if (profilesError) {
+    console.error('Failed to get profiles:', profilesError);
+  }
+
+  // Create a map of profiles by user_id
+  const profileMap: Record<string, { username?: string; full_name?: string; avatar_url?: string }> = {};
+  profiles?.forEach(p => {
+    profileMap[p.id] = p;
+  });
+
+  // Attach profiles to admins
+  const adminsWithProfiles = admins?.map(admin => ({
+    ...admin,
+    profiles: profileMap[admin.user_id] || null
+  })) ?? [];
 
   // Get action counts for each admin from audit logs
   const adminIds = admins?.map(a => a.user_id) ?? [];
@@ -138,7 +153,7 @@ export async function getAdminList(
   });
 
   // Transform to AdminWithRole
-  const adminWithRoles: AdminWithRole[] = (admins ?? []).map(admin => ({
+  const adminWithRoles: AdminWithRole[] = (adminsWithProfiles ?? []).map(admin => ({
     id: admin.id,
     user_id: admin.user_id,
     role: admin.role,
@@ -313,7 +328,7 @@ export async function updateAdminRole(
 }
 
 /**
- * Delete an admin role
+ * Delete an admin role and revert profile to regular user
  */
 export async function deleteAdminRole(
   targetUserId: string,
@@ -338,7 +353,7 @@ export async function deleteAdminRole(
     throw new Error('Cannot delete your own admin role');
   }
 
-  // Delete the role
+  // Delete the role from admin_roles table
   const { error } = await supabaseAdmin
     .from('admin_roles')
     .delete()
@@ -346,6 +361,17 @@ export async function deleteAdminRole(
 
   if (error) {
     throw new Error(`Failed to delete admin role: ${error.message}`);
+  }
+
+  // Update profile role back to 'user'
+  const { error: profileError } = await supabaseAdmin
+    .from('profiles')
+    .update({ role: 'user' })
+    .eq('id', targetUserId);
+
+  if (profileError) {
+    console.error('Failed to update profile role:', profileError);
+    // Don't throw - the admin role is already deleted
   }
 
   // Get acting admin email for audit log
@@ -359,7 +385,7 @@ export async function deleteAdminRole(
     admin_email: actingUser?.user?.email ?? 'unknown',
     target_type: 'admin_role',
     target_id: targetUserId,
-    reason: `Deleted admin role: ${reason}`,
+    reason: `Removed admin: ${reason}`,
     before_state: {
       role: existingRole.role,
       permissions: existingRole.permissions,

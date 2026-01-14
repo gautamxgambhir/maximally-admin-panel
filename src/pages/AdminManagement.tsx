@@ -53,6 +53,8 @@ import {
   History,
   Target,
   User,
+  Trash2,
+  UserMinus,
 } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { useAuth } from '@/contexts/AuthContext';
@@ -60,7 +62,11 @@ import {
   useAdminList,
   useUpdateAdminRole,
   useAdminActivity,
+  useCreateAdminRole,
+  useAdminRole,
+  useDeleteAdminRole,
 } from '@/hooks/useAdminRoles';
+import { supabaseAdmin } from '@/lib/supabase';
 import {
   VALID_ADMIN_ROLES,
   DEFAULT_PERMISSIONS_BY_ROLE,
@@ -199,6 +205,265 @@ function PermissionPreview({
         ))}
       </div>
     </div>
+  );
+}
+
+/**
+ * Add Admin Modal
+ * Allows super admins to add new admins by searching users
+ */
+function AddAdminModal({
+  isOpen,
+  onClose,
+  onSuccess,
+  actingAdminId,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  onSuccess: () => void;
+  actingAdminId: string;
+}) {
+  const [searchEmail, setSearchEmail] = useState('');
+  const [selectedUser, setSelectedUser] = useState<{
+    id: string;
+    email: string;
+    full_name: string | null;
+    username: string | null;
+    role: string;
+  } | null>(null);
+  const [selectedRole, setSelectedRole] = useState<AdminRoleType>('moderator');
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchResults, setSearchResults] = useState<Array<{
+    id: string;
+    email: string;
+    full_name: string | null;
+    username: string | null;
+    role: string;
+  }>>([]);
+  const [searchError, setSearchError] = useState<string | null>(null);
+
+  const createAdminMutation = useCreateAdminRole();
+
+  // Search for users by email
+  const handleSearch = async () => {
+    if (!searchEmail.trim()) return;
+    
+    setIsSearching(true);
+    setSearchError(null);
+    setSearchResults([]);
+    setSelectedUser(null);
+
+    try {
+      // Search in profiles table
+      const { data: profiles, error } = await supabaseAdmin
+        .from('profiles')
+        .select('id, email, full_name, username, role')
+        .ilike('email', `%${searchEmail}%`)
+        .limit(10);
+
+      if (error) throw error;
+
+      // Filter out users who are already admins in admin_roles
+      const { data: existingAdmins } = await supabaseAdmin
+        .from('admin_roles')
+        .select('user_id');
+
+      const existingAdminIds = new Set(existingAdmins?.map(a => a.user_id) ?? []);
+      const availableUsers = profiles?.filter(p => !existingAdminIds.has(p.id)) ?? [];
+
+      setSearchResults(availableUsers);
+      
+      if (availableUsers.length === 0) {
+        setSearchError('No users found or all matching users are already admins');
+      }
+    } catch (err: any) {
+      setSearchError(err.message || 'Failed to search users');
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  // Handle adding the admin
+  const handleAddAdmin = async () => {
+    if (!selectedUser) return;
+
+    try {
+      // First, update the user's profile role to 'admin' if not already
+      if (selectedUser.role !== 'admin') {
+        const { error: profileError } = await supabaseAdmin
+          .from('profiles')
+          .update({ role: 'admin' })
+          .eq('id', selectedUser.id);
+
+        if (profileError) {
+          throw new Error(`Failed to update profile role: ${profileError.message}`);
+        }
+      }
+
+      // Then create the admin_roles entry
+      await createAdminMutation.mutateAsync({
+        input: {
+          user_id: selectedUser.id,
+          role: selectedRole,
+        },
+        actingAdminId,
+      });
+
+      toast.success(`${selectedUser.email} has been added as ${selectedRole.replace('_', ' ')}`);
+      onSuccess();
+      handleClose();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to add admin');
+    }
+  };
+
+  const handleClose = () => {
+    setSearchEmail('');
+    setSelectedUser(null);
+    setSelectedRole('moderator');
+    setSearchResults([]);
+    setSearchError(null);
+    onClose();
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={handleClose}>
+      <DialogContent className="max-w-lg max-h-[90vh] flex flex-col">
+        <DialogHeader className="flex-shrink-0">
+          <DialogTitle className="flex items-center gap-2">
+            <UserPlus className="h-5 w-5" />
+            Add New Admin
+          </DialogTitle>
+          <DialogDescription>
+            Search for a user by email and assign them an admin role
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="flex-1 overflow-y-auto space-y-4 py-4 pr-2">
+          {/* Search Input */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Search User by Email</label>
+            <div className="flex gap-2">
+              <Input
+                placeholder="Enter email address..."
+                value={searchEmail}
+                onChange={(e) => setSearchEmail(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+              />
+              <Button onClick={handleSearch} disabled={isSearching || !searchEmail.trim()}>
+                {isSearching ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Search className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
+          </div>
+
+          {/* Search Results */}
+          {searchResults.length > 0 && (
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Select User</label>
+              <div className="border rounded-lg divide-y max-h-32 overflow-y-auto">
+                {searchResults.map((user) => (
+                  <div
+                    key={user.id}
+                    className={cn(
+                      'p-3 cursor-pointer hover:bg-muted transition-colors',
+                      selectedUser?.id === user.id && 'bg-muted'
+                    )}
+                    onClick={() => setSelectedUser(user)}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">{user.full_name || user.username || 'Unknown'}</p>
+                        <p className="text-sm text-muted-foreground">{user.email}</p>
+                      </div>
+                      {selectedUser?.id === user.id && (
+                        <CheckCircle className="h-5 w-5 text-green-500" />
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Search Error */}
+          {searchError && (
+            <div className="p-3 bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-900 rounded-lg">
+              <p className="text-sm text-yellow-600 dark:text-yellow-400">{searchError}</p>
+            </div>
+          )}
+
+          {/* Selected User & Role Selection */}
+          {selectedUser && (
+            <>
+              <Separator />
+              
+              <div className="p-3 bg-muted rounded-lg">
+                <p className="text-sm text-muted-foreground">Selected User</p>
+                <p className="font-medium">{selectedUser.full_name || selectedUser.username}</p>
+                <p className="text-sm">{selectedUser.email}</p>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Assign Role</label>
+                <Select
+                  value={selectedRole}
+                  onValueChange={(value) => setSelectedRole(value as AdminRoleType)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {VALID_ADMIN_ROLES.filter(role => role !== 'super_admin').map((role) => {
+                      const Icon = getRoleIcon(role);
+                      return (
+                        <SelectItem key={role} value={role}>
+                          <div className="flex items-center gap-2">
+                            <Icon className="h-4 w-4" />
+                            <span>{role.replace('_', ' ')}</span>
+                          </div>
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Note: Super Admin role can only be assigned directly in the database for security.
+                </p>
+              </div>
+
+              {/* Permission Preview - Compact */}
+              <PermissionPreview role={selectedRole} />
+            </>
+          )}
+        </div>
+
+        <DialogFooter className="flex-shrink-0 border-t pt-4">
+          <Button variant="outline" onClick={handleClose}>
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleAddAdmin} 
+            disabled={!selectedUser || createAdminMutation.isPending}
+          >
+            {createAdminMutation.isPending ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Adding...
+              </>
+            ) : (
+              <>
+                <UserPlus className="h-4 w-4 mr-2" />
+                Add Admin
+              </>
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -473,10 +738,16 @@ function AdminRow({
   admin,
   onViewActivity,
   onChangeRole,
+  onRemove,
+  canManage,
+  isCurrentUser,
 }: {
   admin: AdminWithRole;
   onViewActivity: (admin: AdminWithRole) => void;
   onChangeRole: (admin: AdminWithRole) => void;
+  onRemove: (admin: AdminWithRole) => void;
+  canManage: boolean;
+  isCurrentUser: boolean;
 }) {
   const RoleIcon = getRoleIcon(admin.role);
 
@@ -507,6 +778,9 @@ function AdminRow({
               <RoleIcon className="h-3 w-3" />
               {admin.role.replace('_', ' ')}
             </Badge>
+            {isCurrentUser && (
+              <Badge variant="outline" className="text-xs">You</Badge>
+            )}
           </div>
 
           <div className="flex items-center gap-4 text-sm text-muted-foreground">
@@ -545,15 +819,30 @@ function AdminRow({
           <History className="h-3 w-3" />
           Activity
         </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => onChangeRole(admin)}
-          className="flex items-center gap-1"
-        >
-          <Settings className="h-3 w-3" />
-          Role
-        </Button>
+        {canManage && (
+          <>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onChangeRole(admin)}
+              className="flex items-center gap-1"
+            >
+              <Settings className="h-3 w-3" />
+              Role
+            </Button>
+            {!isCurrentUser && admin.role !== 'super_admin' && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onRemove(admin)}
+                className="flex items-center gap-1 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20"
+              >
+                <UserMinus className="h-3 w-3" />
+                Remove
+              </Button>
+            )}
+          </>
+        )}
       </div>
     </div>
   );
@@ -571,13 +860,23 @@ export function AdminManagement() {
   const [selectedAdmin, setSelectedAdmin] = useState<AdminWithRole | null>(null);
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
   const [isActivityModalOpen, setIsActivityModalOpen] = useState(false);
+  const [isAddAdminModalOpen, setIsAddAdminModalOpen] = useState(false);
+  const [isRemoveModalOpen, setIsRemoveModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('list');
 
   // Fetch admin list
   const { data, isLoading, error, refetch } = useAdminList(page, 20);
 
+  // Get current user's admin role to check if they're super_admin
+  const { data: currentUserRole } = useAdminRole(user?.id);
+  const isSuperAdmin = currentUserRole?.role === 'super_admin';
+  const canManageAdmins = currentUserRole?.permissions?.can_manage_admins === true;
+
   // Update role mutation
   const updateRoleMutation = useUpdateAdminRole();
+  
+  // Delete admin mutation
+  const deleteAdminMutation = useDeleteAdminRole();
 
   // Filter admins by search term
   const filteredAdmins = data?.admins.filter(admin => {
@@ -620,6 +919,30 @@ export function AdminManagement() {
     setIsRoleModalOpen(true);
   }, []);
 
+  // Handle remove admin
+  const handleRemoveAdmin = useCallback((admin: AdminWithRole) => {
+    setSelectedAdmin(admin);
+    setIsRemoveModalOpen(true);
+  }, []);
+
+  // Confirm remove admin
+  const confirmRemoveAdmin = useCallback(async () => {
+    if (!selectedAdmin || !user?.id) return;
+
+    try {
+      await deleteAdminMutation.mutateAsync({
+        targetUserId: selectedAdmin.user_id,
+        actingAdminId: user.id,
+        reason: 'Removed by super admin',
+      });
+      setIsRemoveModalOpen(false);
+      setSelectedAdmin(null);
+      refetch();
+    } catch (err) {
+      // Error is handled by the mutation
+    }
+  }, [selectedAdmin, user?.id, deleteAdminMutation, refetch]);
+
   // Calculate stats
   const stats = {
     total: data?.total ?? 0,
@@ -639,14 +962,22 @@ export function AdminManagement() {
             Manage admin roles and view activity
           </p>
         </div>
-        <Button
-          variant="outline"
-          onClick={() => refetch()}
-          disabled={isLoading}
-        >
-          <RefreshCw className={cn('h-4 w-4 mr-2', isLoading && 'animate-spin')} />
-          Refresh
-        </Button>
+        <div className="flex items-center gap-2">
+          {isSuperAdmin && (
+            <Button onClick={() => setIsAddAdminModalOpen(true)}>
+              <UserPlus className="h-4 w-4 mr-2" />
+              Add Admin
+            </Button>
+          )}
+          <Button
+            variant="outline"
+            onClick={() => refetch()}
+            disabled={isLoading}
+          >
+            <RefreshCw className={cn('h-4 w-4 mr-2', isLoading && 'animate-spin')} />
+            Refresh
+          </Button>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -778,6 +1109,9 @@ export function AdminManagement() {
                       admin={admin}
                       onViewActivity={handleViewActivity}
                       onChangeRole={handleChangeRole}
+                      onRemove={handleRemoveAdmin}
+                      canManage={canManageAdmins}
+                      isCurrentUser={admin.user_id === user?.id}
                     />
                   ))}
                 </div>
@@ -841,6 +1175,14 @@ export function AdminManagement() {
         </TabsContent>
       </Tabs>
 
+      {/* Add Admin Modal (Super Admin Only) */}
+      <AddAdminModal
+        isOpen={isAddAdminModalOpen}
+        onClose={() => setIsAddAdminModalOpen(false)}
+        onSuccess={() => refetch()}
+        actingAdminId={user?.id ?? ''}
+      />
+
       {/* Role Assignment Modal */}
       <RoleAssignmentModal
         admin={selectedAdmin}
@@ -862,6 +1204,74 @@ export function AdminManagement() {
           setSelectedAdmin(null);
         }}
       />
+
+      {/* Remove Admin Confirmation Modal */}
+      <Dialog open={isRemoveModalOpen} onOpenChange={(open) => {
+        if (!open) {
+          setIsRemoveModalOpen(false);
+          setSelectedAdmin(null);
+        }
+      }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <UserMinus className="h-5 w-5" />
+              Remove Admin
+            </DialogTitle>
+            <DialogDescription>
+              Are you sure you want to remove admin access for this user?
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedAdmin && (
+            <div className="py-4">
+              <div className="p-4 bg-muted rounded-lg space-y-2">
+                <p className="font-medium">{selectedAdmin.full_name || selectedAdmin.username || 'Unknown User'}</p>
+                <p className="text-sm text-muted-foreground">{selectedAdmin.email}</p>
+                <Badge className={getRoleBadgeColor(selectedAdmin.role)}>
+                  {selectedAdmin.role.replace('_', ' ')}
+                </Badge>
+              </div>
+              
+              <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-900 rounded-lg">
+                <p className="text-sm text-yellow-700 dark:text-yellow-400">
+                  This will remove their admin role and revert their account to a regular user. They will no longer be able to access the admin panel.
+                </p>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsRemoveModalOpen(false);
+                setSelectedAdmin(null);
+              }}
+              disabled={deleteAdminMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmRemoveAdmin}
+              disabled={deleteAdminMutation.isPending}
+            >
+              {deleteAdminMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Removing...
+                </>
+              ) : (
+                <>
+                  <UserMinus className="h-4 w-4 mr-2" />
+                  Remove Admin
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
