@@ -2,6 +2,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { useTheme } from '@/contexts/ThemeContext'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { 
   LayoutDashboard, 
   FileText, 
@@ -11,7 +12,7 @@ import {
   Trophy,
   Users,
   UserCheck,
-  Scale,
+  // Scale, // REMOVED - Judge account system deprecated
   Award,
   Mail,
   Bell,
@@ -23,12 +24,21 @@ import {
   X,
   Flag,
   Shield,
-  Rocket
+  Rocket,
+  Activity,
+  ClipboardList,
+  ScrollText,
+  Database,
+  HeartPulse,
+  AlertTriangle,
 } from 'lucide-react'
 import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
+import { SystemHealthAlertBanner } from '@/components/SystemHealthAlertBanner'
+import { usePendingQueueCount } from '@/hooks/useQueue'
+import { useSystemHealthSummary } from '@/hooks/useSystemHealth'
 
 interface LayoutProps {
   children: React.ReactNode
@@ -44,6 +54,12 @@ export function Layout({ children }: LayoutProps) {
   const [expandedCategories, setExpandedCategories] = useState<string[]>([])
   const [isRefreshing, setIsRefreshing] = useState(false)
   const queryClient = useQueryClient()
+
+  // Queue count for badge - Requirement 6.4
+  const { data: pendingQueueCount } = usePendingQueueCount()
+  
+  // System health for alert indicators - Requirements 8.3, 12.2
+  const { data: systemHealthData } = useSystemHealthSummary()
 
   const handleRefresh = async () => {
     setIsRefreshing(true)
@@ -79,6 +95,39 @@ export function Layout({ children }: LayoutProps) {
           name: 'Dashboard',
           href: '/dashboard',
           icon: LayoutDashboard,
+          showAlert: systemHealthData && systemHealthData.status !== 'healthy',
+        },
+        {
+          name: 'Activity Feed',
+          href: '/activity',
+          icon: Activity,
+        },
+      ]
+    },
+    {
+      id: 'moderation',
+      name: 'Moderation',
+      items: [
+        {
+          name: 'Moderation Queue',
+          href: '/queue',
+          icon: ClipboardList,
+          badge: pendingQueueCount && pendingQueueCount > 0 ? pendingQueueCount : undefined,
+        },
+        {
+          name: 'User Reports',
+          href: '/user-reports',
+          icon: Flag,
+        },
+        {
+          name: 'User Moderation',
+          href: '/user-moderation',
+          icon: Shield,
+        },
+        {
+          name: 'Project Gallery',
+          href: '/project-gallery',
+          icon: Rocket,
         },
       ]
     },
@@ -112,6 +161,28 @@ export function Layout({ children }: LayoutProps) {
           href: '/hackathons/create',
           icon: Plus,
         },
+        // REMOVED - Edit request system deprecated (Platform Simplification - organizers can edit directly)
+        // {
+        //   name: 'Edit Requests',
+        //   href: '/edit-requests',
+        //   icon: RefreshCw,
+        // },
+        {
+          name: 'Certificates',
+          href: '/certificates',
+          icon: Award,
+        },
+      ]
+    },
+    {
+      id: 'people',
+      name: 'Organizers',
+      items: [
+        {
+          name: 'Organizers',
+          href: '/organizers',
+          icon: Users,
+        },
         {
           name: 'Organizer Applications',
           href: '/organizer-applications',
@@ -123,52 +194,6 @@ export function Layout({ children }: LayoutProps) {
           icon: UserCheck,
         },
         {
-          name: 'Edit Requests',
-          href: '/edit-requests',
-          icon: RefreshCw,
-        },
-        {
-          name: 'Certificates',
-          href: '/certificates',
-          icon: Award,
-        },
-      ]
-    },
-    {
-      id: 'people',
-      name: 'People & Judges',
-      items: [
-        {
-          name: 'People',
-          href: '/people',
-          icon: UserCheck,
-        },
-        {
-          name: 'Judges',
-          href: '/judges',
-          icon: Scale,
-        },
-        {
-          name: 'Judge Applications',
-          href: '/judge-applications',
-          icon: UserCheck,
-        },
-        {
-          name: 'Judge Inbox',
-          href: '/judge-inbox',
-          icon: Mail,
-        },
-        {
-          name: 'Judge Events Verification',
-          href: '/judge-events-verification',
-          icon: UserCheck,
-        },
-        {
-          name: 'Organizers',
-          href: '/organizers',
-          icon: Users,
-        },
-        {
           name: 'Organizer Inbox',
           href: '/organizer-inbox',
           icon: Mail,
@@ -176,23 +201,30 @@ export function Layout({ children }: LayoutProps) {
       ]
     },
     {
-      id: 'moderation',
-      name: 'Moderation',
+      id: 'analytics',
+      name: 'Analytics & Logs',
       items: [
         {
-          name: 'User Reports',
-          href: '/user-reports',
-          icon: Flag,
+          name: 'Audit Logs',
+          href: '/audit',
+          icon: ScrollText,
+        },
+      ]
+    },
+    {
+      id: 'system',
+      name: 'System',
+      items: [
+        {
+          name: 'Data Management',
+          href: '/data-management',
+          icon: Database,
         },
         {
-          name: 'User Moderation',
-          href: '/user-moderation',
-          icon: Shield,
-        },
-        {
-          name: 'Project Gallery',
-          href: '/project-gallery',
-          icon: Rocket,
+          name: 'System Health',
+          href: '/system-health',
+          icon: HeartPulse,
+          showAlert: systemHealthData && systemHealthData.status !== 'healthy',
         },
       ]
     },
@@ -375,13 +407,15 @@ export function Layout({ children }: LayoutProps) {
                 <div className="space-y-1">
                   {category.items.map((item) => {
                     const Icon = item.icon
+                    const itemBadge = 'badge' in item ? item.badge : undefined
+                    const itemShowAlert = 'showAlert' in item ? item.showAlert : false
                     return (
                       <Link
                         key={item.href}
                         to={item.href}
                         onClick={() => setIsMobileMenuOpen(false)}
                         className={cn(
-                          'flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors',
+                          'flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors relative',
                           isActiveRoute(item.href)
                             ? 'bg-primary text-primary-foreground'
                             : 'text-foreground hover:bg-accent hover:text-accent-foreground',
@@ -389,8 +423,46 @@ export function Layout({ children }: LayoutProps) {
                         )}
                         title={isCollapsed ? item.name : undefined}
                       >
-                        <Icon className={cn('h-5 w-5', !isCollapsed && 'mr-3')} />
-                        {!isCollapsed && <span className="truncate">{item.name}</span>}
+                        <div className="relative">
+                          <Icon className={cn('h-5 w-5', !isCollapsed && 'mr-3')} />
+                          {/* Alert indicator dot for collapsed state */}
+                          {isCollapsed && itemShowAlert && (
+                            <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-yellow-500 animate-pulse" />
+                          )}
+                          {/* Badge for collapsed state */}
+                          {isCollapsed && itemBadge && (
+                            <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-red-500 text-white text-[10px] flex items-center justify-center">
+                              {itemBadge > 9 ? '9+' : itemBadge}
+                            </span>
+                          )}
+                        </div>
+                        {!isCollapsed && (
+                          <>
+                            <span className="truncate flex-1">{item.name}</span>
+                            {/* Queue count badge - Requirement 6.4 */}
+                            {itemBadge && (
+                              <Badge 
+                                className={cn(
+                                  'ml-2 h-5 px-1.5 text-xs',
+                                  isActiveRoute(item.href)
+                                    ? 'bg-primary-foreground/20 text-primary-foreground'
+                                    : 'bg-red-500 text-white hover:bg-red-600'
+                                )}
+                              >
+                                {itemBadge > 99 ? '99+' : itemBadge}
+                              </Badge>
+                            )}
+                            {/* Alert indicator - Requirements 8.3, 12.2 */}
+                            {itemShowAlert && (
+                              <AlertTriangle className={cn(
+                                'h-4 w-4 ml-2 animate-pulse',
+                                isActiveRoute(item.href)
+                                  ? 'text-primary-foreground'
+                                  : 'text-yellow-500'
+                              )} />
+                            )}
+                          </>
+                        )}
                       </Link>
                     )
                   })}
@@ -429,6 +501,9 @@ export function Layout({ children }: LayoutProps) {
         isCollapsed ? 'lg:pl-16' : 'lg:pl-64'
       )}>
         <main className="p-4 md:p-6 lg:p-8">
+          {/* System Health Alert Banner - displays when errors spike or performance degrades */}
+          {/* Requirements: 12.2, 12.4 */}
+          <SystemHealthAlertBanner className="mb-6" dismissible={true} />
           {children}
         </main>
       </div>

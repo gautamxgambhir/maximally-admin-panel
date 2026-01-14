@@ -7,9 +7,10 @@ export interface DashboardRow {
   featured_core_id_1: number | null
   featured_core_id_2: number | null
   featured_core_id_3: number | null
-  featured_judge_id_1: number | null
-  featured_judge_id_2: number | null
-  featured_judge_id_3: number | null
+  // REMOVED - Judge account system deprecated (Platform Simplification)
+  // featured_judge_id_1: number | null
+  // featured_judge_id_2: number | null
+  // featured_judge_id_3: number | null
 }
 
 export async function getDashboard(): Promise<DashboardRow | null> {
@@ -21,10 +22,7 @@ export async function getDashboard(): Promise<DashboardRow | null> {
       featured_hackathon_id,
       featured_core_id_1,
       featured_core_id_2,
-      featured_core_id_3,
-      featured_judge_id_1,
-      featured_judge_id_2,
-      featured_judge_id_3
+      featured_core_id_3
     `)
     .eq('id', 1)
     .maybeSingle()
@@ -44,10 +42,7 @@ export async function setFeaturedHackathon(params: { id: number | null, name: st
       featured_hackathon_id,
       featured_core_id_1,
       featured_core_id_2,
-      featured_core_id_3,
-      featured_judge_id_1,
-      featured_judge_id_2,
-      featured_judge_id_3
+      featured_core_id_3
     `)
     .single()
 
@@ -76,10 +71,7 @@ export async function setFeaturedCore(params: {
       featured_hackathon_id,
       featured_core_id_1,
       featured_core_id_2,
-      featured_core_id_3,
-      featured_judge_id_1,
-      featured_judge_id_2,
-      featured_judge_id_3
+      featured_core_id_3
     `)
     .single()
 
@@ -87,36 +79,6 @@ export async function setFeaturedCore(params: {
   return data as DashboardRow
 }
 
-// Update featured judges
-export async function setFeaturedJudges(params: {
-  judgeId1: number | null
-  judgeId2: number | null
-  judgeId3: number | null
-}): Promise<DashboardRow> {
-  const payload = {
-    id: 1,
-    featured_judge_id_1: params.judgeId1,
-    featured_judge_id_2: params.judgeId2,
-    featured_judge_id_3: params.judgeId3
-  }
-  const { data, error } = await supabase
-    .from('dashboard')
-    .upsert(payload, { onConflict: 'id' })
-    .select(`
-      id, 
-      featured_hackathon_name, 
-      featured_hackathon_id,
-      featured_core_id_1,
-      featured_core_id_2,
-      featured_core_id_3,
-      featured_judge_id_1,
-      featured_judge_id_2,
-      featured_judge_id_3
-    `)
-    .single()
-
-  if (error) throw error
-  return data as DashboardRow
-}
-
-
+// REMOVED - Judge account system deprecated (Platform Simplification)
+// setFeaturedJudges function has been removed as part of platform simplification.
+// Judges are now managed per-hackathon without accounts.

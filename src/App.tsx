@@ -1,6 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { Login } from './pages/Login'
-import { Dashboard } from './pages/Dashboard'
+import { EnhancedDashboard } from './pages/EnhancedDashboard'
 import { BlogList } from './pages/BlogList'
 import { CreateBlog } from './pages/CreateBlog'
 import { EditBlog } from './pages/EditBlog'
@@ -9,23 +9,33 @@ import { CreateHackathon } from './pages/CreateHackathon'
 import { EditHackathon } from './pages/EditHackathon'
 import { AdminManagement } from './pages/AdminManagement'
 import { PeopleManagement } from './pages/PeopleManagement'
-import { JudgesManagement } from './pages/JudgesManagement'
-import JudgeApplications from './pages/JudgeApplications'
+// REMOVED - Judge account system deprecated (Platform Simplification)
+// import { JudgesManagement } from './pages/JudgesManagement'
+// import JudgeApplications from './pages/JudgeApplications'
+// import JudgeInbox from './pages/JudgeInbox'
+// import { JudgeEventsVerification } from './pages/JudgeEventsVerification'
 import OrganizerApplications from './pages/OrganizerApplications'
-import JudgeInbox from './pages/JudgeInbox'
-import { JudgeEventsVerification } from './pages/JudgeEventsVerification'
 import { Certificates } from './pages/Certificates'
 import { EmailGenerator } from './pages/EmailGenerator'
 import { OrganizerHackathonRequests } from './pages/OrganizerHackathonRequests'
-import { OrganizersManagement } from './pages/OrganizersManagement'
+// REMOVED - Duplicate of Organizer Oversight
+// import { OrganizersManagement } from './pages/OrganizersManagement'
+import { OrganizerOversight } from './components/OrganizerOversight'
 import OrganizerInbox from './pages/OrganizerInbox'
 // import { NotificationsManagement } from './pages/NotificationsManagement' // REMOVED - Notification system disabled
-import HackathonEditRequests from './pages/HackathonEditRequests'
+// REMOVED - Edit request system deprecated (Platform Simplification - organizers can edit directly)
+// import HackathonEditRequests from './pages/HackathonEditRequests'
 import UserReports from './pages/UserReports'
 import UserModeration from './pages/UserModeration'
 import ProjectGalleryModeration from './pages/ProjectGalleryModeration'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { Layout } from './components/Layout'
+// Admin Moderation System pages
+import { ActivityFeed } from './components/ActivityFeed'
+import { ModerationQueue } from './components/ModerationQueue'
+import AuditLogs from './pages/AuditLogs'
+import DataManagement from './pages/DataManagement'
+import SystemHealth from './pages/SystemHealth'
 
 function App() {
   return (
@@ -37,7 +47,7 @@ function App() {
         element={
           <ProtectedRoute>
             <Layout>
-              <Dashboard />
+              <EnhancedDashboard />
             </Layout>
           </ProtectedRoute>
         }
@@ -122,6 +132,7 @@ function App() {
           </ProtectedRoute>
         }
       />
+      {/* REMOVED - Judge account system deprecated (Platform Simplification)
       <Route
         path="/judges"
         element={
@@ -142,6 +153,7 @@ function App() {
           </ProtectedRoute>
         }
       />
+      */}
       <Route
         path="/organizer-applications"
         element={
@@ -152,6 +164,7 @@ function App() {
           </ProtectedRoute>
         }
       />
+      {/* REMOVED - Judge account system deprecated (Platform Simplification)
       <Route
         path="/judge-inbox"
         element={
@@ -172,6 +185,7 @@ function App() {
           </ProtectedRoute>
         }
       />
+      */}
       <Route
         path="/certificates"
         element={
@@ -202,6 +216,7 @@ function App() {
           </ProtectedRoute>
         }
       />
+      {/* REMOVED - Edit request system deprecated (Platform Simplification - organizers can edit directly)
       <Route
         path="/edit-requests"
         element={
@@ -212,12 +227,25 @@ function App() {
           </ProtectedRoute>
         }
       />
+      */}
+      {/* REMOVED - Duplicate of Organizer Oversight, organizer_profiles table not populated
       <Route
         path="/organizers"
         element={
           <ProtectedRoute>
             <Layout>
               <OrganizersManagement />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      */}
+      <Route
+        path="/organizer-oversight"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <OrganizerOversight />
             </Layout>
           </ProtectedRoute>
         }
@@ -269,6 +297,74 @@ function App() {
           <ProtectedRoute>
             <Layout>
               <ProjectGalleryModeration />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      {/* Admin Moderation System Routes */}
+      <Route
+        path="/activity"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <div className="space-y-6">
+                <div>
+                  <h1 className="text-3xl font-bold">Activity Feed</h1>
+                  <p className="text-muted-foreground mt-1">
+                    Real-time platform activity monitoring
+                  </p>
+                </div>
+                <ActivityFeed showFilters={true} showStats={true} enableRealtime={true} />
+              </div>
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/queue"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <div className="space-y-6">
+                <div>
+                  <h1 className="text-3xl font-bold">Moderation Queue</h1>
+                  <p className="text-muted-foreground mt-1">
+                    Review and process flagged content
+                  </p>
+                </div>
+                <ModerationQueue />
+              </div>
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/audit"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <AuditLogs />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/data-management"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <DataManagement />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/system-health"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <SystemHealth />
             </Layout>
           </ProtectedRoute>
         }

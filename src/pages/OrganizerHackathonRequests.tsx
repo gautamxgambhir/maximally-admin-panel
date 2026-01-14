@@ -14,7 +14,8 @@ import {
   Trash2,
   ExternalLink,
   Clock,
-  Mail
+  Mail,
+  Archive
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -31,6 +32,7 @@ interface OrganizerHackathon {
   format: string;
   venue?: string;
   status: string;
+  hackathon_status?: string;
   publish_requested_at?: string;
   created_at: string;
   views_count: number;
@@ -48,7 +50,8 @@ interface OrganizerHackathon {
   contact_email?: string;
 }
 
-type TabType = 'pending' | 'approved' | 'rejected';
+// Simplified to 3 categories per Platform Simplification requirements
+type TabType = 'pending' | 'live' | 'ended';
 
 export function OrganizerHackathonRequests() {
   const [allRequests, setAllRequests] = useState<OrganizerHackathon[]>([]);
@@ -71,10 +74,10 @@ export function OrganizerHackathonRequests() {
 
   const fetchRequests = async () => {
     try {
+      // Fetch all hackathons for the simplified 3-category view
       const { data, error } = await supabaseAdmin
         .from('organizer_hackathons')
         .select('*')
-        .in('status', ['pending_review', 'published', 'rejected'])
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -87,17 +90,20 @@ export function OrganizerHackathonRequests() {
     }
   };
 
-  // Filter requests based on active tab
+  // Filter requests based on simplified 3-category view
+  // Pending Review: status = 'pending_review'
+  // Live: status = 'published' (hackathon is approved and live)
+  // Ended: status = 'ended' OR hackathon_status = 'ended'
   const filteredRequests = allRequests.filter(request => {
     if (activeTab === 'pending') return request.status === 'pending_review';
-    if (activeTab === 'approved') return request.status === 'published';
-    if (activeTab === 'rejected') return request.status === 'rejected';
+    if (activeTab === 'live') return request.status === 'published' && request.hackathon_status !== 'ended';
+    if (activeTab === 'ended') return request.status === 'ended' || request.hackathon_status === 'ended';
     return false;
   });
 
   const pendingCount = allRequests.filter(r => r.status === 'pending_review').length;
-  const approvedCount = allRequests.filter(r => r.status === 'published').length;
-  const rejectedCount = allRequests.filter(r => r.status === 'rejected').length;
+  const liveCount = allRequests.filter(r => r.status === 'published' && r.hackathon_status !== 'ended').length;
+  const endedCount = allRequests.filter(r => r.status === 'ended' || r.hackathon_status === 'ended').length;
 
   const handleApprove = async () => {
     if (!selectedRequest) return;
@@ -214,17 +220,17 @@ export function OrganizerHackathonRequests() {
     <div className="space-y-6">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-3xl font-bold">Organizer Hackathon Requests</h1>
+          <h1 className="text-3xl font-bold">Hackathon Management</h1>
           <p className="text-muted-foreground mt-1">
-            Review and manage hackathons submitted by organizers
+            Review pending requests and monitor live/ended hackathons. One-time approval only - no re-approval needed for edits.
           </p>
         </div>
         <div className="text-sm text-muted-foreground">
-          total: {allRequests.length} requests
+          Total: {allRequests.length} hackathons
         </div>
       </div>
 
-      {/* Tabs - Dark Button Style */}
+      {/* Simplified 3-category tabs per Platform Simplification requirements */}
       <div className="grid grid-cols-3 gap-4 mb-6">
         <button
           onClick={() => setActiveTab('pending')}
@@ -235,31 +241,31 @@ export function OrganizerHackathonRequests() {
           }`}
         >
           <Clock className="h-5 w-5" />
-          <span className="font-semibold">Pending ({pendingCount})</span>
+          <span className="font-semibold">Pending Review ({pendingCount})</span>
         </button>
 
         <button
-          onClick={() => setActiveTab('approved')}
+          onClick={() => setActiveTab('live')}
           className={`flex items-center justify-center gap-3 px-6 py-4 rounded-lg border-2 transition-all ${
-            activeTab === 'approved'
+            activeTab === 'live'
               ? 'bg-green-500/10 border-green-500/50 text-green-600'
               : 'bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-600 hover:text-gray-300'
           }`}
         >
           <CheckCircle className="h-5 w-5" />
-          <span className="font-semibold">Approved ({approvedCount})</span>
+          <span className="font-semibold">Live ({liveCount})</span>
         </button>
 
         <button
-          onClick={() => setActiveTab('rejected')}
+          onClick={() => setActiveTab('ended')}
           className={`flex items-center justify-center gap-3 px-6 py-4 rounded-lg border-2 transition-all ${
-            activeTab === 'rejected'
-              ? 'bg-red-500/10 border-red-500/50 text-red-600'
+            activeTab === 'ended'
+              ? 'bg-gray-500/10 border-gray-500/50 text-gray-600'
               : 'bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-600 hover:text-gray-300'
           }`}
         >
-          <XCircle className="h-5 w-5" />
-          <span className="font-semibold">Rejected ({rejectedCount})</span>
+          <Archive className="h-5 w-5" />
+          <span className="font-semibold">Ended ({endedCount})</span>
         </button>
       </div>
 
@@ -274,21 +280,21 @@ export function OrganizerHackathonRequests() {
               </p>
             </>
           )}
-          {activeTab === 'approved' && (
+          {activeTab === 'live' && (
             <>
               <CheckCircle className="h-16 w-16 mx-auto mb-4 text-green-500" />
-              <h3 className="text-xl font-semibold mb-2">No Approved Hackathons</h3>
+              <h3 className="text-xl font-semibold mb-2">No Live Hackathons</h3>
               <p className="text-muted-foreground">
-                No hackathons have been approved yet.
+                No hackathons are currently live.
               </p>
             </>
           )}
-          {activeTab === 'rejected' && (
+          {activeTab === 'ended' && (
             <>
-              <XCircle className="h-16 w-16 mx-auto mb-4 text-red-500" />
-              <h3 className="text-xl font-semibold mb-2">No Rejected Hackathons</h3>
+              <Archive className="h-16 w-16 mx-auto mb-4 text-gray-500" />
+              <h3 className="text-xl font-semibold mb-2">No Ended Hackathons</h3>
               <p className="text-muted-foreground">
-                No hackathons have been rejected yet.
+                No hackathons have ended yet.
               </p>
             </>
           )}
@@ -306,14 +312,14 @@ export function OrganizerHackathonRequests() {
                         PENDING REVIEW
                       </Badge>
                     )}
-                    {request.status === 'published' && (
+                    {request.status === 'published' && request.hackathon_status !== 'ended' && (
                       <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/20">
-                        APPROVED
+                        LIVE
                       </Badge>
                     )}
-                    {request.status === 'rejected' && (
-                      <Badge variant="outline" className="bg-red-500/10 text-red-600 border-red-500/20">
-                        REJECTED
+                    {(request.status === 'ended' || request.hackathon_status === 'ended') && (
+                      <Badge variant="outline" className="bg-gray-500/10 text-gray-600 border-gray-500/20">
+                        ENDED
                       </Badge>
                     )}
                   </div>
@@ -350,16 +356,16 @@ export function OrganizerHackathonRequests() {
                 </div>
               )}
 
-              {/* Show rejection reason for rejected hackathons */}
-              {request.status === 'rejected' && request.rejection_reason && (
+              {/* Show rejection reason for rejected hackathons - kept for historical data */}
+              {request.rejection_reason && (
                 <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-                  <p className="text-sm font-semibold text-red-800 mb-1">Rejection Reason:</p>
+                  <p className="text-sm font-semibold text-red-800 mb-1">Previous Rejection Reason:</p>
                   <p className="text-sm text-red-700">{request.rejection_reason}</p>
                 </div>
               )}
 
-              {/* Show stats for approved hackathons */}
-              {request.status === 'published' && (
+              {/* Show stats for live hackathons */}
+              {request.status === 'published' && request.hackathon_status !== 'ended' && (
                 <div className="mb-4 grid grid-cols-2 gap-4">
                   <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
                     <div className="flex items-center gap-2 mb-1">
@@ -407,14 +413,25 @@ export function OrganizerHackathonRequests() {
                   </>
                 )}
 
-                {/* Show view link for approved hackathons */}
-                {request.status === 'published' && (
+                {/* Show view link for live hackathons */}
+                {request.status === 'published' && request.hackathon_status !== 'ended' && (
                   <Button
                     onClick={() => window.open(`${API_BASE_URL}/hackathon/${request.slug}`, '_blank')}
                     className="bg-blue-600 hover:bg-blue-700"
                   >
                     <ExternalLink className="h-4 w-4 mr-2" />
                     View Live
+                  </Button>
+                )}
+
+                {/* Show view link for ended hackathons (read-only) */}
+                {(request.status === 'ended' || request.hackathon_status === 'ended') && (
+                  <Button
+                    onClick={() => window.open(`${API_BASE_URL}/hackathon/${request.slug}`, '_blank')}
+                    variant="outline"
+                  >
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    View Archive
                   </Button>
                 )}
 
@@ -457,7 +474,7 @@ export function OrganizerHackathonRequests() {
         />
       )}
 
-      {/* Approve Modal */}
+      {/* Approve Modal - One-time approval per Platform Simplification requirements */}
       {showApproveModal && selectedRequest && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <Card className="max-w-lg w-full p-6">
@@ -466,6 +483,12 @@ export function OrganizerHackathonRequests() {
               Are you sure you want to approve "{selectedRequest.hackathon_name}"? 
               This will publish the hackathon and notify the organizer via email.
             </p>
+            <div className="bg-blue-50 border border-blue-200 p-4 rounded-md mb-4">
+              <p className="text-sm text-blue-800 font-semibold">ℹ️ One-Time Approval</p>
+              <p className="text-sm text-blue-700 mt-1">
+                Once approved, the organizer can edit their hackathon freely without needing re-approval.
+              </p>
+            </div>
             <div className="bg-muted p-4 rounded-md mb-4">
               <p className="text-sm font-semibold mb-2">Hackathon Details:</p>
               <p className="text-sm"><strong>Name:</strong> {selectedRequest.hackathon_name}</p>
@@ -489,7 +512,7 @@ export function OrganizerHackathonRequests() {
                 disabled={actionLoading}
                 className="bg-green-600 hover:bg-green-700"
               >
-                {actionLoading ? 'Approving...' : 'Approve & Publish'}
+                {actionLoading ? 'Approving...' : 'Approve & Go Live'}
               </Button>
             </div>
           </Card>
