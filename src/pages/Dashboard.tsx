@@ -5,6 +5,7 @@ import { useHackathons } from '@/hooks/useHackathons'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { FileText, Plus, Edit, Users, Trophy, Calendar } from 'lucide-react'
+import { FeaturedEvents } from '@/components/FeaturedEvents'
 
 export function Dashboard() {
   const { user } = useAuth()
@@ -151,6 +152,9 @@ export function Dashboard() {
       </div>
 
       {/* REMOVED - Featured Sections deprecated (Platform Simplification) */}
+
+      {/* Featured Events Management */}
+      <FeaturedEvents />
 
       {/* Recent Content */}
       <div className="grid gap-6 md:grid-cols-2">

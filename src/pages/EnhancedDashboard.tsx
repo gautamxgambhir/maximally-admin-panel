@@ -26,6 +26,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { MetricCard } from '@/components/MetricCard';
 import { TrendChart } from '@/components/TrendChart';
 import { AlertBanner } from '@/components/AlertBanner';
+import { FeaturedEvents } from '@/components/FeaturedEvents';
+import { FeaturedBlogs } from '@/components/FeaturedBlogs';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAnalyticsOverview, usePeriodComparison } from '@/hooks/useAnalytics';
 import { usePendingQueueCount } from '@/hooks/useQueue';
@@ -305,6 +307,12 @@ export function EnhancedDashboard() {
         {/* Quick Actions */}
         <QuickActionsCard />
       </div>
+
+      {/* Featured Events Management */}
+      <FeaturedEvents />
+
+      {/* Featured Blogs Management */}
+      <FeaturedBlogs />
     </div>
   );
 }
