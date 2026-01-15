@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useSearchParams } from 'react-router-dom';
 import { Search, User, Ban, Volume2, VolumeX, AlertTriangle, Shield, Clock, Eye, History, Mail, Calendar, CheckCircle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -47,23 +48,75 @@ export default function UserModeration() {
   const [actionType, setActionType] = useState('');
   const [actionReason, setActionReason] = useState('');
   const [actionDuration, setActionDuration] = useState('');
+  const [loadedUsers, setLoadedUsers] = useState<UserWithModeration[]>([]);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const pageSize = 20; // Load 20 users at a time
   const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  // Fetch users directly from Supabase
-  const { data: users = [], isLoading } = useQuery({
-    queryKey: ['moderation-users', search, filter],
-    queryFn: async () => {
-      let query = supabaseAdmin
+  // Check for userId in URL parameters and auto-open modal
+  useEffect(() => {
+    const userId = searchParams.get('userId');
+    if (userId && !selectedUser) {
+      // Fetch the user by ID and open the modal
+      supabaseAdmin
         .from('profiles')
         .select('*')
+        .eq('id', userId)
+        .single()
+        .then(async ({ data: profile, error }) => {
+          if (error || !profile) {
+            toast.error('User not found');
+            // Remove the userId param from URL
+            searchParams.delete('userId');
+            setSearchParams(searchParams);
+            return;
+          }
+
+          // Get moderation status
+          const { data: modStatus } = await supabaseAdmin
+            .from('user_moderation_status')
+            .select('*')
+            .eq('user_id', profile.id)
+            .maybeSingle();
+
+          const userWithStatus: UserWithModeration = {
+            ...profile,
+            moderation_status: modStatus || null
+          };
+
+          setSelectedUser(userWithStatus);
+        });
+    }
+  }, [searchParams, selectedUser, setSearchParams]);
+
+  // Clear userId param when modal is closed
+  useEffect(() => {
+    if (!selectedUser && searchParams.get('userId')) {
+      searchParams.delete('userId');
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [selectedUser, searchParams, setSearchParams]);
+
+  // Fetch users directly from Supabase with pagination
+  const { data: queryResult, isLoading, isFetching } = useQuery({
+    queryKey: ['moderation-users', search, filter, page],
+    queryFn: async () => {
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+
+      let query = supabaseAdmin
+        .from('profiles')
+        .select('*', { count: 'exact' })
         .order('created_at', { ascending: false })
-        .limit(100);
+        .range(from, to);
 
       if (search) {
         query = query.or(`username.ilike.%${search}%,full_name.ilike.%${search}%,email.ilike.%${search}%`);
       }
 
-      const { data: profiles, error } = await query;
+      const { data: profiles, error, count } = await query;
       if (error) throw new Error(error.message);
 
       // Get moderation status for each user
@@ -73,7 +126,7 @@ export default function UserModeration() {
             .from('user_moderation_status')
             .select('*')
             .eq('user_id', profile.id)
-            .single();
+            .maybeSingle(); // Use maybeSingle to avoid 406 errors when no row exists
 
           return {
             ...profile,
@@ -89,9 +142,36 @@ export default function UserModeration() {
       else if (filter === 'suspended') filtered = filtered.filter(u => u.moderation_status?.is_suspended);
       else if (filter === 'warned') filtered = filtered.filter(u => (u.moderation_status?.warning_count || 0) > 0);
 
-      return filtered as UserWithModeration[];
+      return {
+        users: filtered as UserWithModeration[],
+        hasMore: count ? (from + pageSize) < count : false
+      };
     }
   });
+
+  const newUsers = queryResult?.users || [];
+
+  // Update loaded users and hasMore when new data arrives
+  useEffect(() => {
+    if (queryResult) {
+      setHasMore(queryResult.hasMore);
+      if (page === 1) {
+        // Reset on new search/filter
+        setLoadedUsers(queryResult.users);
+      } else {
+        // Append new users for "Load More"
+        setLoadedUsers(prev => [...prev, ...queryResult.users]);
+      }
+    }
+  }, [queryResult, page]);
+
+  // Reset page when search or filter changes
+  useEffect(() => {
+    setPage(1);
+    setLoadedUsers([]);
+  }, [search, filter]);
+
+  const users = loadedUsers;
 
   // Fetch stats
   const { data: stats } = useQuery({
@@ -117,7 +197,7 @@ export default function UserModeration() {
       if (!selectedUser) return null;
 
       const [modStatusRes, historyRes, reportsRes] = await Promise.all([
-        supabaseAdmin.from('user_moderation_status').select('*').eq('user_id', selectedUser.id).single(),
+        supabaseAdmin.from('user_moderation_status').select('*').eq('user_id', selectedUser.id).maybeSingle(),
         supabaseAdmin.from('user_moderation_actions').select('*').eq('user_id', selectedUser.id).order('created_at', { ascending: false }),
         supabaseAdmin.from('user_reports').select('*').eq('reported_user_id', selectedUser.id).order('created_at', { ascending: false })
       ]);
@@ -232,11 +312,12 @@ export default function UserModeration() {
       </div>
 
       {/* Users List */}
-      {isLoading ? (
+      {isLoading && page === 1 ? (
         <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" /></div>
       ) : (
-        <div className="grid gap-4">
-          {users.map(user => (
+        <div className="space-y-4">
+          <div className="grid gap-4">
+            {users.map(user => (
             <Card key={user.id} className="hover:shadow-md transition-shadow">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
@@ -348,7 +429,35 @@ export default function UserModeration() {
                 </div>
               </CardContent>
             </Card>
-          ))}
+            ))}
+          </div>
+
+          {/* Load More Button */}
+          {hasMore && (
+            <div className="flex justify-center pt-4">
+              <Button 
+                onClick={() => setPage(p => p + 1)} 
+                disabled={isFetching}
+                variant="outline"
+                size="lg"
+              >
+                {isFetching ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2" />
+                    Loading...
+                  </>
+                ) : (
+                  'Load More'
+                )}
+              </Button>
+            </div>
+          )}
+
+          {!hasMore && users.length > 0 && (
+            <div className="text-center text-gray-500 py-4">
+              All users loaded
+            </div>
+          )}
         </div>
       )}
     </div>

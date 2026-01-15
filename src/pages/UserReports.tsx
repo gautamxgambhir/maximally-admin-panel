@@ -43,17 +43,25 @@ export default function UserReports() {
   const [selectedReport, setSelectedReport] = useState<UserReport | null>(null);
   const [adminNotes, setAdminNotes] = useState('');
   const [resolution, setResolution] = useState('');
+  const [page, setPage] = useState(1);
+  const [loadedReports, setLoadedReports] = useState<UserReport[]>([]);
+  const [hasMore, setHasMore] = useState(true);
+  const pageSize = 20;
   const queryClient = useQueryClient();
 
-  // Fetch reports directly from Supabase
-  const { data: reports = [], isLoading, error } = useQuery({
-    queryKey: ['user-reports'],
+  // Fetch reports directly from Supabase with pagination
+  const { data: queryResult, isLoading, isFetching, error } = useQuery({
+    queryKey: ['user-reports', page],
     queryFn: async () => {
-      // First get all reports
-      const { data: reportsData, error: reportsError } = await supabaseAdmin
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+
+      // First get the reports with pagination
+      const { data: reportsData, error: reportsError, count } = await supabaseAdmin
         .from('user_reports')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .select('*', { count: 'exact' })
+        .order('created_at', { ascending: false })
+        .range(from, to);
 
       if (reportsError) {
         console.error('Error fetching reports:', reportsError);
@@ -68,14 +76,14 @@ export default function UserReports() {
             .from('profiles')
             .select('id, username, full_name, avatar_url')
             .eq('id', report.reporter_id)
-            .single();
+            .maybeSingle();
 
           // Get reported user profile
           const { data: reportedUser } = await supabaseAdmin
             .from('profiles')
             .select('id, username, full_name, avatar_url, email')
             .eq('id', report.reported_user_id)
-            .single();
+            .maybeSingle();
 
           return {
             ...report,
@@ -85,9 +93,28 @@ export default function UserReports() {
         })
       );
 
-      return reportsWithProfiles as UserReport[];
+      return {
+        reports: reportsWithProfiles as UserReport[],
+        hasMore: count ? (from + pageSize) < count : false
+      };
     }
   });
+
+  const newReports = queryResult?.reports || [];
+
+  // Update loaded reports and hasMore when new data arrives
+  React.useEffect(() => {
+    if (queryResult) {
+      setHasMore(queryResult.hasMore);
+      if (page === 1) {
+        setLoadedReports(queryResult.reports);
+      } else {
+        setLoadedReports(prev => [...prev, ...queryResult.reports]);
+      }
+    }
+  }, [queryResult, page]);
+
+  const reports = loadedReports;
 
   // Update report directly in Supabase
   const updateReport = useMutation({
@@ -289,6 +316,33 @@ export default function UserReports() {
                     </CardContent>
                   </Card>
                 ))}
+              </div>
+            )}
+
+            {/* Load More Button */}
+            {hasMore && filteredReports(status).length > 0 && (
+              <div className="flex justify-center pt-4">
+                <Button 
+                  onClick={() => setPage(p => p + 1)} 
+                  disabled={isFetching}
+                  variant="outline"
+                  size="lg"
+                >
+                  {isFetching ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2" />
+                      Loading...
+                    </>
+                  ) : (
+                    'Load More'
+                  )}
+                </Button>
+              </div>
+            )}
+
+            {!hasMore && filteredReports(status).length > 0 && (
+              <div className="text-center text-gray-500 py-4">
+                All reports loaded
               </div>
             )}
           </TabsContent>

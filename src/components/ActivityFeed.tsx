@@ -717,9 +717,53 @@ export function ActivityFeed({
 
   // Handle quick action from detail panel
   const handleQuickAction = useCallback((action: string, activity: ActivityItem) => {
-    // These would navigate to appropriate pages or open modals
-    console.log('Quick action:', action, activity);
-    // TODO: Implement navigation based on action type
+    switch (action) {
+      case 'view_target':
+        // Navigate based on target type
+        switch (activity.target_type) {
+          case 'hackathon':
+            window.open(`/hackathons/${activity.target_id}`, '_blank');
+            break;
+          case 'user':
+            window.location.href = `/user-moderation?userId=${activity.target_id}`;
+            break;
+          case 'registration':
+            window.location.href = `/hackathon-edit-requests?registrationId=${activity.target_id}`;
+            break;
+          case 'team':
+            window.open(`/teams/${activity.target_id}`, '_blank');
+            break;
+          case 'submission':
+            window.open(`/submissions/${activity.target_id}`, '_blank');
+            break;
+          default:
+            console.log('View target:', activity.target_type, activity.target_id);
+        }
+        break;
+        
+      case 'view_actor':
+        if (activity.actor_id) {
+          window.location.href = `/user-moderation?userId=${activity.actor_id}`;
+        }
+        break;
+        
+      case 'investigate':
+        // Open user moderation with the actor
+        if (activity.actor_id) {
+          window.location.href = `/user-moderation?userId=${activity.actor_id}&investigate=true`;
+        }
+        break;
+        
+      case 'take_action':
+        // Open user moderation with action panel
+        if (activity.actor_id) {
+          window.location.href = `/user-moderation?userId=${activity.actor_id}&action=true`;
+        }
+        break;
+        
+      default:
+        console.log('Quick action:', action, activity);
+    }
   }, []);
 
   // Handle load more

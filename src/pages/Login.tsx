@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Navigate, useNavigate } from 'react-router-dom'
+import { Navigate, useNavigate, useLocation } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -23,7 +23,12 @@ export function Login() {
   const { user, isAdmin, signIn } = useAuth()
   const { theme, toggleTheme } = useTheme()
   const navigate = useNavigate()
+  const location = useLocation()
   const [isLoading, setIsLoading] = useState(false)
+  
+  // Get the intended destination from location state, default to dashboard
+  // This now includes query parameters
+  const from = (location.state as any)?.from || '/dashboard'
   
   const {
     register,
@@ -33,9 +38,9 @@ export function Login() {
     resolver: zodResolver(loginSchema),
   })
 
-  // If already logged in as admin, redirect to dashboard
+  // If already logged in as admin, redirect to intended destination
   if (user && isAdmin) {
-    return <Navigate to="/dashboard" replace />
+    return <Navigate to={from} replace />
   }
 
   const onSubmit = async (data: LoginForm) => {
@@ -47,10 +52,8 @@ export function Login() {
         toast.error(error.message || 'Failed to sign in')
       } else {
         toast.success('Signed in successfully!')
-        // Give a small delay for state to update
-        setTimeout(() => {
-          navigate('/dashboard', { replace: true })
-        }, 100)
+        // Navigate to intended destination (includes query params)
+        navigate(from, { replace: true })
       }
     } catch (error: any) {
       toast.error(error.message || 'An unexpected error occurred')

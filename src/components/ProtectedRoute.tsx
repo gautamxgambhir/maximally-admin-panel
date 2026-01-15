@@ -25,8 +25,9 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   }
 
   // If not authenticated, redirect to login immediately
+  // Preserve the full path including query parameters
   if (!user || !isAdmin) {
-    return <Navigate to="/login" state={{ from: location }} replace />
+    return <Navigate to="/login" state={{ from: location.pathname + location.search }} replace />
   }
 
   // User is authenticated and admin, show content
