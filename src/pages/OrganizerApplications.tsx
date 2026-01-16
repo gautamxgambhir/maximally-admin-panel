@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Eye,
@@ -27,6 +27,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Textarea } from '@/components/ui/textarea';
 import { supabase, supabaseAdmin } from '@/lib/supabase';
 import { toast } from 'sonner';
+import { getApiBaseUrl } from '@/lib/apiHelpers';
 
 const getAuthToken = async (): Promise<string | null> => {
   try {
@@ -84,7 +85,8 @@ export default function OrganizerApplications() {
     queryKey: ['organizer-applications'],
     queryFn: async () => {
       const headers = await getAuthHeaders();
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/admin/organizer-applications`, {
+      const API_BASE_URL = getApiBaseUrl();
+      const response = await fetch(`${API_BASE_URL}/api/admin/organizer-applications`, {
         headers
       });
       if (!response.ok) throw new Error('Failed to fetch applications');
@@ -96,11 +98,12 @@ export default function OrganizerApplications() {
   const approveMutation = useMutation({
     mutationFn: async (id: string) => {
       const headers = await getAuthHeaders();
+      const API_BASE_URL = getApiBaseUrl();
       console.log('Approving application:', id);
-      console.log('API URL:', `${import.meta.env.VITE_API_BASE_URL}/api/admin/organizer-applications/${id}/approve`);
+      console.log('API URL:', `${API_BASE_URL}/api/admin/organizer-applications/${id}/approve`);
       
       const response = await fetch(
-        `${import.meta.env.VITE_API_BASE_URL}/api/admin/organizer-applications/${id}/approve`,
+        `${API_BASE_URL}/api/admin/organizer-applications/${id}/approve`,
         {
           method: 'POST',
           headers
@@ -131,8 +134,9 @@ export default function OrganizerApplications() {
   const rejectMutation = useMutation({
     mutationFn: async ({ id, reason }: { id: string; reason: string }) => {
       const headers = await getAuthHeaders();
+      const API_BASE_URL = getApiBaseUrl();
       const response = await fetch(
-        `${import.meta.env.VITE_API_BASE_URL}/api/admin/organizer-applications/${id}/reject`,
+        `${API_BASE_URL}/api/admin/organizer-applications/${id}/reject`,
         {
           method: 'POST',
           headers,
@@ -158,8 +162,9 @@ export default function OrganizerApplications() {
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       const headers = await getAuthHeaders();
+      const API_BASE_URL = getApiBaseUrl();
       const response = await fetch(
-        `${import.meta.env.VITE_API_BASE_URL}/api/admin/organizer-applications/${id}`,
+        `${API_BASE_URL}/api/admin/organizer-applications/${id}`,
         {
           method: 'DELETE',
           headers

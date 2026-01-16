@@ -12,6 +12,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Plus, Edit, Trash2, Search, Users, GripVertical, ExternalLink } from 'lucide-react'
 import { supabase, supabaseAdmin } from '@/lib/supabase'
 import { toast } from 'sonner'
+import { getMainWebsiteUrl } from '@/lib/apiHelpers'
 import {
   DndContext,
   closestCenter,
@@ -175,7 +176,7 @@ function SortableOrganizerCard({
           <div className="flex items-center gap-2 ml-4">
             {organizer.username && (
               <a 
-                href={`${import.meta.env.VITE_MAIN_WEBSITE_URL || 'http://localhost:5002'}/organizer/${organizer.username}`} 
+                href={`${getMainWebsiteUrl()}/organizer/${organizer.username}`} 
                 target="_blank" 
                 rel="noopener noreferrer"
                 title="View Profile"

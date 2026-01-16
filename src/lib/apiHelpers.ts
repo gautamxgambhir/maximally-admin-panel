@@ -9,13 +9,55 @@ import { supabase } from './supabase'
 
 /**
  * Get the main website API base URL
+ * Automatically detects production vs development environment
  */
 export const getApiBaseUrl = (): string => {
-  const url = import.meta.env.VITE_API_BASE_URL
-  if (!url) {
-    console.warn('VITE_API_BASE_URL is not set. External API calls will fail.')
+  // Check if we have an explicit environment variable
+  const envUrl = import.meta.env.VITE_API_BASE_URL
+  if (envUrl) {
+    return envUrl
   }
-  return url || 'http://localhost:5002'
+  
+  // Auto-detect based on hostname
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname
+    
+    // Production: admin panel is on maximally.admin-panel.vercel.app or similar
+    // Main website is on maximally.in
+    if (hostname.includes('vercel.app') || hostname.includes('admin')) {
+      return 'https://maximally.in'
+    }
+  }
+  
+  // Development fallback
+  console.warn('VITE_API_BASE_URL is not set. Using localhost.')
+  return 'http://localhost:5002'
+}
+
+/**
+ * Get the main website URL (for links, not API calls)
+ * Automatically detects production vs development environment
+ */
+export const getMainWebsiteUrl = (): string => {
+  // Check if we have an explicit environment variable
+  const envUrl = import.meta.env.VITE_MAIN_WEBSITE_URL
+  if (envUrl) {
+    return envUrl
+  }
+  
+  // Auto-detect based on hostname
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname
+    
+    // Production: admin panel is on vercel.app
+    // Main website is on maximally.in
+    if (hostname.includes('vercel.app') || hostname.includes('admin')) {
+      return 'https://maximally.in'
+    }
+  }
+  
+  // Development fallback
+  return 'http://localhost:5002'
 }
 
 /**
@@ -96,10 +138,16 @@ export const callMainWebsiteApi = async <T = any>(
  * - Complex workflows that exist in main website
  * - Operations that trigger multiple side effects
  * 
+ * ✅ Use getMainWebsiteUrl() when:
+ * - Creating links to main website pages
+ * - Redirecting users to main website
+ * - Opening main website in new tab
+ * 
  * ❌ NEVER:
  * - Call relative paths like fetch('/api/...')
  * - Call endpoints that don't exist
  * - Create your own API server in admin panel
+ * - Hardcode URLs like 'http://localhost:5002'
  */
 
 /**

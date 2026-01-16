@@ -48,6 +48,7 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
+import { getApiBaseUrl } from '@/lib/apiHelpers'
 import {
   useSortable,
 } from '@dnd-kit/sortable'
@@ -237,7 +238,7 @@ export function HackathonList() {
   const [rejectionReason, setRejectionReason] = useState('')
   const [unpublishReason, setUnpublishReason] = useState('')
   
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5002'
+  const API_BASE_URL = getApiBaseUrl()
 
   // Update sorted hackathons when data changes
   React.useEffect(() => {

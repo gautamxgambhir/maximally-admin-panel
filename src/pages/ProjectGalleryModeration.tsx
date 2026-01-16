@@ -29,6 +29,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabaseAdmin } from '@/lib/supabase';
 import { toast } from 'sonner';
+import { getApiBaseUrl } from '@/lib/apiHelpers';
 
 interface GalleryProject {
   id: number;
@@ -167,7 +168,7 @@ export default function ProjectGalleryModeration() {
       const { data: session } = await supabaseAdmin.auth.getSession();
       const token = session?.session?.access_token;
       
-      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5002';
+      const API_BASE_URL = getApiBaseUrl();
       const response = await fetch(`${API_BASE_URL}/api/gallery/admin/sync-hackathon-submissions`, {
         method: 'POST',
         headers: {

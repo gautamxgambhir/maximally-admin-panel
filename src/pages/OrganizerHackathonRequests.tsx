@@ -18,6 +18,7 @@ import {
   Archive
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { getApiBaseUrl } from '../lib/apiHelpers';
 
 interface OrganizerHackathon {
   id: number;
@@ -66,7 +67,7 @@ export function OrganizerHackathonRequests() {
   const [rejectionReason, setRejectionReason] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
 
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5002';
+  const API_BASE_URL = getApiBaseUrl();
 
   useEffect(() => {
     fetchRequests();
