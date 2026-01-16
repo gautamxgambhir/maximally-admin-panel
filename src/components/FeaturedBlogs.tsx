@@ -78,32 +78,20 @@ export function FeaturedBlogs() {
   const handleSave = async () => {
     setSaving(true)
     try {
-      // Get auth token
-      const { data: { session } } = await supabaseAdmin.auth.getSession()
-      if (!session?.access_token) {
-        toast.error('Not authenticated')
-        return
+      // Prepare the data for upsert
+      const updateData = {
+        id: 1,
+        slot_1_id: slots[0],
+        slot_2_id: slots[1],
+        slot_3_id: slots[2]
       }
 
-      // Call API endpoint instead of direct Supabase call
-      const response = await fetch('/api/admin/featured-blogs', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`
-        },
-        body: JSON.stringify({
-          slot_1_id: slots[0],
-          slot_2_id: slots[1],
-          slot_3_id: slots[2]
-        })
-      })
+      // Upsert directly to Supabase
+      const { error } = await supabaseAdmin
+        .from('featured_blogs')
+        .upsert(updateData, { onConflict: 'id' })
 
-      const result = await response.json()
-
-      if (!response.ok || !result.success) {
-        throw new Error(result.message || 'Failed to save featured blogs')
-      }
+      if (error) throw error
 
       toast.success('Featured blogs updated successfully!')
     } catch (error) {

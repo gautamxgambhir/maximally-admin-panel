@@ -167,7 +167,8 @@ export default function ProjectGalleryModeration() {
       const { data: session } = await supabaseAdmin.auth.getSession();
       const token = session?.session?.access_token;
       
-      const response = await fetch('/api/gallery/admin/sync-hackathon-submissions', {
+      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5002';
+      const response = await fetch(`${API_BASE_URL}/api/gallery/admin/sync-hackathon-submissions`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

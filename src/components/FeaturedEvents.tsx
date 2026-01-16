@@ -122,30 +122,21 @@ export function FeaturedEvents() {
   const handleSave = async () => {
     setSaving(true)
     try {
-      // Get auth token
-      const { data: { session } } = await supabaseAdmin.auth.getSession()
-      if (!session?.access_token) {
-        toast.error('Not authenticated')
-        return
-      }
-
-      // Call API endpoint instead of direct Supabase call
-      const response = await fetch('/api/admin/featured-hackathons', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`
-        },
-        body: JSON.stringify({
-          slots: slots
-        })
+      // Prepare the data for upsert
+      const updateData: any = { id: 1 }
+      
+      slots.forEach((slot, index) => {
+        const slotNum = index + 1
+        updateData[`slot_${slotNum}_type`] = slot.type
+        updateData[`slot_${slotNum}_id`] = slot.id
       })
 
-      const result = await response.json()
+      // Upsert directly to Supabase
+      const { error } = await supabaseAdmin
+        .from('featured_hackathons')
+        .upsert(updateData, { onConflict: 'id' })
 
-      if (!response.ok || !result.success) {
-        throw new Error(result.message || 'Failed to save featured events')
-      }
+      if (error) throw error
 
       toast.success('Featured events updated successfully!')
     } catch (error) {
