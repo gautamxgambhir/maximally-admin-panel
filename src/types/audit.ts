@@ -173,6 +173,18 @@ export type AuditActionType =
   | 'data_anonymized'
   | 'bulk_action'
   
+  // Documentation actions
+  | 'doc_section_created'
+  | 'doc_section_updated'
+  | 'doc_section_deleted'
+  | 'doc_section_reordered'
+  | 'doc_page_created'
+  | 'doc_page_updated'
+  | 'doc_page_deleted'
+  | 'doc_page_published'
+  | 'doc_page_unpublished'
+  | 'doc_page_reordered'
+  
   // Content moderation
   | 'content_flagged'
   | 'content_unflagged'
@@ -215,7 +227,9 @@ export type AuditTargetType =
   | 'notification'
   | 'api_key'
   | 'settings'
-  | 'data';
+  | 'data'
+  | 'doc_section'
+  | 'doc_page';
 
 /**
  * Audit log entry as stored in the database

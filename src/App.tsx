@@ -36,6 +36,7 @@ import { ModerationQueue } from './components/ModerationQueue'
 import AuditLogs from './pages/AuditLogs'
 import DataManagement from './pages/DataManagement'
 import SystemHealth from './pages/SystemHealth'
+import DocsManagement from './pages/DocsManagement'
 
 function App() {
   return (
@@ -365,6 +366,16 @@ function App() {
           <ProtectedRoute>
             <Layout>
               <SystemHealth />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/docs"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <DocsManagement />
             </Layout>
           </ProtectedRoute>
         }
