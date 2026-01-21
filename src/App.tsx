@@ -37,6 +37,7 @@ import AuditLogs from './pages/AuditLogs'
 import DataManagement from './pages/DataManagement'
 import SystemHealth from './pages/SystemHealth'
 import DocsManagement from './pages/DocsManagement'
+import NewsletterManagement from './pages/NewsletterManagement'
 
 function App() {
   return (
@@ -376,6 +377,16 @@ function App() {
           <ProtectedRoute>
             <Layout>
               <DocsManagement />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/newsletter"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <NewsletterManagement />
             </Layout>
           </ProtectedRoute>
         }

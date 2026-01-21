@@ -283,6 +283,12 @@ export function Layout({ children }: LayoutProps) {
           icon: Mail,
           requiredPermission: 'can_send_announcements' as AdminPermission,
         },
+        {
+          name: 'Newsletter',
+          href: '/newsletter',
+          icon: Mail,
+          requiredPermission: 'can_send_announcements' as AdminPermission,
+        },
       ]
     },
     {
