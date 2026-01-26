@@ -50,6 +50,7 @@ export function NewsletterComposer({ newsletterId, onClose }: NewsletterComposer
   }, [newsletterId]);
 
   const loadNewsletter = async (id: string) => {
+    setIsLoading(true);
     try {
       const baseUrl = getApiBaseUrl();
       const headers = await getAuthHeaders();
@@ -57,9 +58,13 @@ export function NewsletterComposer({ newsletterId, onClose }: NewsletterComposer
       if (!response.ok) throw new Error('Failed to load newsletter');
       
       const data = await response.json();
-      setSubject(data.subject);
-      setContent(data.content);
-      setHtmlContent(data.html_content);
+      console.log('Loaded newsletter data:', data); // Debug log
+      console.log('Content:', data.content); // Debug log
+      console.log('HTML Content:', data.html_content); // Debug log
+      
+      setSubject(data.subject || '');
+      setContent(data.content || '');
+      setHtmlContent(data.html_content || '');
       
       if (data.scheduled_for) {
         const date = new Date(data.scheduled_for);
@@ -67,7 +72,10 @@ export function NewsletterComposer({ newsletterId, onClose }: NewsletterComposer
         setScheduleTime(date.toTimeString().slice(0, 5));
       }
     } catch (error) {
+      console.error('Error loading newsletter:', error);
       toast.error('Failed to load newsletter');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -98,6 +106,40 @@ export function NewsletterComposer({ newsletterId, onClose }: NewsletterComposer
       toast.success('Newsletter saved as draft successfully');
     } catch (error) {
       toast.error('Failed to save draft');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleSaveReadyToSend = async () => {
+    if (!subject.trim() || !content.trim()) {
+      toast.error('Please fill in subject and content');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const baseUrl = getApiBaseUrl();
+      const headers = await getAuthHeaders();
+      const response = await fetch(`${baseUrl}/api/admin/newsletter/save`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          id: newsletterId,
+          subject,
+          content,
+          html_content: htmlContent,
+          status: 'ready_to_send',
+        }),
+      });
+
+      if (!response.ok) throw new Error('Failed to save newsletter');
+
+      toast.success('Newsletter marked as ready to send! It will be sent at the next global scheduled time.');
+      resetForm();
+      onClose?.();
+    } catch (error) {
+      toast.error('Failed to save newsletter');
     } finally {
       setIsSaving(false);
     }
@@ -204,8 +246,15 @@ export function NewsletterComposer({ newsletterId, onClose }: NewsletterComposer
     onClose?.();
   };
 
-  // Show queue monitor if we have a batch ID
-  if (showQueueMonitor && currentBatchId) {
+  // Show loading state while fetching newsletter data
+  if (isLoading && newsletterId) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin" />
+        <span className="ml-2">Loading newsletter...</span>
+      </div>
+    );
+  }
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
@@ -247,7 +296,7 @@ export function NewsletterComposer({ newsletterId, onClose }: NewsletterComposer
         <div>
           <Label>Content</Label>
           <RichTextEditor
-            value={content}
+            value={htmlContent || content}
             onChange={(text, html) => {
               setContent(text);
               setHtmlContent(html);
@@ -299,6 +348,24 @@ export function NewsletterComposer({ newsletterId, onClose }: NewsletterComposer
         </Button>
 
         <Button
+          onClick={handleSaveReadyToSend}
+          variant="secondary"
+          disabled={isSaving || isLoading || !subject || !content}
+        >
+          {isSaving ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              Saving...
+            </>
+          ) : (
+            <>
+              <Calendar className="h-4 w-4 mr-2" />
+              Ready to Send
+            </>
+          )}
+        </Button>
+
+        <Button
           onClick={() => setShowPreview(true)}
           variant="outline"
           disabled={!subject || !content}
@@ -320,7 +387,7 @@ export function NewsletterComposer({ newsletterId, onClose }: NewsletterComposer
           ) : (
             <>
               <Calendar className="h-4 w-4 mr-2" />
-              Schedule
+              Schedule (Pending)
             </>
           )}
         </Button>

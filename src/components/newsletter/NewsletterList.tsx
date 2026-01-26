@@ -18,7 +18,7 @@ import { ConfirmModal } from '@/components/ConfirmModal';
 interface Newsletter {
   id: string;
   subject: string;
-  status: 'draft' | 'pending' | 'sent';
+  status: 'draft' | 'ready_to_send' | 'pending' | 'sent';
   created_at: string;
   scheduled_for?: string;
   sent_at?: string;
@@ -116,18 +116,49 @@ export function NewsletterList({ onEdit }: NewsletterListProps) {
   const getStatusBadge = (status: Newsletter['status']) => {
     const variants = {
       draft: 'secondary',
-      pending: 'default',
+      ready_to_send: 'default',
+      pending: 'destructive',
       sent: 'success',
+    } as const;
+
+    const labels = {
+      draft: 'Draft',
+      ready_to_send: 'Ready to Send',
+      pending: 'Pending',
+      sent: 'Sent',
     } as const;
 
     return (
       <Badge variant={variants[status] as any}>
-        {status.charAt(0).toUpperCase() + status.slice(1)}
+        {labels[status]}
       </Badge>
     );
   };
 
+  const handleChangeStatus = async (newsletterId: string, newStatus: string) => {
+    try {
+      const baseUrl = getApiBaseUrl();
+      const headers = await getAuthHeaders();
+      const response = await fetch(`${baseUrl}/api/admin/newsletter/change-status`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          id: newsletterId,
+          status: newStatus,
+        }),
+      });
+
+      if (!response.ok) throw new Error('Failed to change status');
+
+      toast.success(`Newsletter status changed to ${newStatus.replace('_', ' ')}`);
+      loadNewsletters();
+    } catch (error) {
+      toast.error('Failed to change newsletter status');
+    }
+  };
+
   const hasPendingNewsletters = newsletters.some(n => n.status === 'pending');
+  const hasReadyToSendNewsletters = newsletters.some(n => n.status === 'ready_to_send');
 
   if (isLoading) {
     return <div className="text-center py-8">Loading newsletters...</div>;
@@ -146,24 +177,80 @@ export function NewsletterList({ onEdit }: NewsletterListProps) {
 
   return (
     <div className="space-y-4">
-      {hasPendingNewsletters && (
-        <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
-          <div className="flex items-center gap-2">
-            <Clock className="h-5 w-5 text-orange-500" />
-            <div>
-              <p className="font-medium">Pending Newsletters</p>
-              <p className="text-sm text-muted-foreground">
-                You have scheduled newsletters waiting to be sent
-              </p>
+      {(hasPendingNewsletters || hasReadyToSendNewsletters) && (
+        <div className="space-y-3">
+          {hasPendingNewsletters && (
+            <div className="flex items-center justify-between p-4 bg-orange-50 dark:bg-orange-950 border border-orange-200 dark:border-orange-800 rounded-lg">
+              <div className="flex items-center gap-2">
+                <Clock className="h-5 w-5 text-orange-500" />
+                <div>
+                  <p className="font-medium text-orange-900 dark:text-orange-100">Pending Newsletters</p>
+                  <p className="text-sm text-orange-700 dark:text-orange-300">
+                    Newsletters with individual scheduling waiting to be sent
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  onClick={async () => {
+                    try {
+                      const baseUrl = getApiBaseUrl();
+                      const headers = await getAuthHeaders();
+                      const response = await fetch(`${baseUrl}/api/admin/newsletter/send-pending-now`, {
+                        method: 'POST',
+                        headers,
+                      });
+                      const result = await response.json();
+                      if (response.ok) {
+                        toast.success(result.message || 'Pending newsletters sent immediately!');
+                        loadNewsletters();
+                      } else {
+                        toast.error(result.error || 'Failed to send newsletters');
+                      }
+                    } catch (error) {
+                      toast.error('Failed to send newsletters');
+                    }
+                  }}
+                  variant="destructive"
+                  size="sm"
+                >
+                  Send NOW (IST)
+                </Button>
+                <Button
+                  onClick={handleSendPending}
+                  disabled={isSendingPending}
+                  variant="default"
+                  size="sm"
+                >
+                  {isSendingPending ? 'Sending...' : 'Send Pending'}
+                </Button>
+              </div>
             </div>
-          </div>
-          <Button
-            onClick={handleSendPending}
-            disabled={isSendingPending}
-            variant="default"
-          >
-            {isSendingPending ? 'Sending...' : 'Send Pending Now'}
-          </Button>
+          )}
+
+          {hasReadyToSendNewsletters && (
+            <div className="flex items-center justify-between p-4 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg">
+              <div className="flex items-center gap-2">
+                <Calendar className="h-5 w-5 text-blue-500" />
+                <div>
+                  <p className="font-medium text-blue-900 dark:text-blue-100">Ready to Send</p>
+                  <p className="text-sm text-blue-700 dark:text-blue-300">
+                    Newsletters waiting for the next global scheduled time
+                  </p>
+                </div>
+              </div>
+              <Button
+                onClick={() => {
+                  // Navigate to schedule settings
+                  toast.info('Configure global schedule in the Schedule tab');
+                }}
+                variant="outline"
+                size="sm"
+              >
+                View Schedule
+              </Button>
+            </div>
+          )}
         </div>
       )}
 
@@ -210,10 +297,41 @@ export function NewsletterList({ onEdit }: NewsletterListProps) {
               <TableCell className="text-right">
                 <div className="flex items-center justify-end gap-2">
                   {newsletter.status === 'draft' && (
+                    <>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onEdit(newsletter.id)}
+                        title="Edit"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleChangeStatus(newsletter.id, 'ready_to_send')}
+                        title="Mark as Ready to Send"
+                      >
+                        <Calendar className="h-4 w-4" />
+                      </Button>
+                    </>
+                  )}
+                  {newsletter.status === 'ready_to_send' && (
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => onEdit(newsletter.id)}
+                      onClick={() => handleChangeStatus(newsletter.id, 'draft')}
+                      title="Move back to Draft"
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                  )}
+                  {newsletter.status === 'pending' && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleChangeStatus(newsletter.id, 'draft')}
+                      title="Move back to Draft"
                     >
                       <Edit className="h-4 w-4" />
                     </Button>
@@ -222,6 +340,7 @@ export function NewsletterList({ onEdit }: NewsletterListProps) {
                     variant="ghost"
                     size="sm"
                     onClick={() => handleDelete(newsletter.id)}
+                    title="Delete"
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>

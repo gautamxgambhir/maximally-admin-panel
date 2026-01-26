@@ -25,10 +25,12 @@ export function RichTextEditor({ value, onChange }: RichTextEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (editorRef.current && content !== editorRef.current.innerHTML) {
-      editorRef.current.innerHTML = content;
+    setContent(value);
+    if (editorRef.current) {
+      // Use the HTML content if available, otherwise use plain text
+      editorRef.current.innerHTML = value || '';
     }
-  }, []);
+  }, [value]);
 
   const execCommand = (command: string, value?: string) => {
     document.execCommand(command, false, value);
@@ -116,25 +118,25 @@ export function RichTextEditor({ value, onChange }: RichTextEditorProps) {
 
         <select
           onChange={(e) => execCommand('formatBlock', e.target.value)}
-          className="h-8 px-2 text-sm border rounded bg-background"
+          className="h-8 px-2 text-sm border rounded bg-background text-foreground border-border"
           defaultValue=""
         >
-          <option value="">Normal</option>
-          <option value="h1">Heading 1</option>
-          <option value="h2">Heading 2</option>
-          <option value="h3">Heading 3</option>
-          <option value="p">Paragraph</option>
+          <option value="" className="bg-background text-foreground">Normal</option>
+          <option value="h1" className="bg-background text-foreground">Heading 1</option>
+          <option value="h2" className="bg-background text-foreground">Heading 2</option>
+          <option value="h3" className="bg-background text-foreground">Heading 3</option>
+          <option value="p" className="bg-background text-foreground">Paragraph</option>
         </select>
 
         <select
           onChange={(e) => execCommand('fontSize', e.target.value)}
-          className="h-8 px-2 text-sm border rounded bg-background ml-2"
+          className="h-8 px-2 text-sm border rounded bg-background text-foreground border-border ml-2"
           defaultValue="3"
         >
-          <option value="1">Small</option>
-          <option value="3">Normal</option>
-          <option value="5">Large</option>
-          <option value="7">Huge</option>
+          <option value="1" className="bg-background text-foreground">Small</option>
+          <option value="3" className="bg-background text-foreground">Normal</option>
+          <option value="5" className="bg-background text-foreground">Large</option>
+          <option value="7" className="bg-background text-foreground">Huge</option>
         </select>
       </div>
 

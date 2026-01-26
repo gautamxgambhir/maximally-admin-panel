@@ -267,11 +267,11 @@ export function NewsletterSubscribers() {
         </div>
         <div className="p-4 border rounded-lg">
           <p className="text-sm text-muted-foreground">Active</p>
-          <p className="text-2xl font-bold text-green-600">{activeCount}</p>
+          <p className="text-2xl font-bold text-green-600 dark:text-green-400">{activeCount}</p>
         </div>
         <div className="p-4 border rounded-lg">
           <p className="text-sm text-muted-foreground">Unsubscribed</p>
-          <p className="text-2xl font-bold text-red-600">{unsubscribedCount}</p>
+          <p className="text-2xl font-bold text-red-600 dark:text-red-400">{unsubscribedCount}</p>
         </div>
       </div>
 
@@ -432,23 +432,23 @@ export function NewsletterSubscribers() {
               <div className="space-y-3">
                 <Alert className={importResult.added > 0 ? 'border-green-500' : 'border-yellow-500'}>
                   {importResult.added > 0 ? (
-                    <CheckCircle2 className="h-4 w-4 text-green-500" />
+                    <CheckCircle2 className="h-4 w-4 text-green-500 dark:text-green-400" />
                   ) : (
-                    <AlertCircle className="h-4 w-4 text-yellow-500" />
+                    <AlertCircle className="h-4 w-4 text-yellow-500 dark:text-yellow-400" />
                   )}
                   <AlertDescription>
                     <div className="space-y-2">
                       <p className="font-medium">Import Summary:</p>
                       <div className="grid grid-cols-2 gap-2 text-sm">
                         <div>Total Processed: <span className="font-semibold">{importResult.total_processed}</span></div>
-                        <div className="text-green-600">New Added: <span className="font-semibold">{importResult.added}</span></div>
-                        <div className="text-yellow-600">Duplicates Skipped: <span className="font-semibold">{importResult.duplicates}</span></div>
-                        <div className="text-red-600">Invalid Emails: <span className="font-semibold">{importResult.invalid}</span></div>
+                        <div className="text-green-600 dark:text-green-400">New Added: <span className="font-semibold">{importResult.added}</span></div>
+                        <div className="text-yellow-600 dark:text-yellow-400">Duplicates Skipped: <span className="font-semibold">{importResult.duplicates}</span></div>
+                        <div className="text-red-600 dark:text-red-400">Invalid Emails: <span className="font-semibold">{importResult.invalid}</span></div>
                       </div>
                       
                       {importResult.duplicate_emails && importResult.duplicate_emails.length > 0 && (
                         <details className="mt-2">
-                          <summary className="cursor-pointer text-sm text-yellow-600 hover:underline">
+                          <summary className="cursor-pointer text-sm text-yellow-600 dark:text-yellow-400 hover:underline">
                             View duplicate emails ({importResult.duplicate_emails.length})
                           </summary>
                           <div className="mt-2 max-h-32 overflow-y-auto text-xs bg-muted p-2 rounded">
@@ -461,7 +461,7 @@ export function NewsletterSubscribers() {
                       
                       {importResult.invalid_emails && importResult.invalid_emails.length > 0 && (
                         <details className="mt-2">
-                          <summary className="cursor-pointer text-sm text-red-600 hover:underline">
+                          <summary className="cursor-pointer text-sm text-red-600 dark:text-red-400 hover:underline">
                             View invalid emails ({importResult.invalid_emails.length})
                           </summary>
                           <div className="mt-2 max-h-32 overflow-y-auto text-xs bg-muted p-2 rounded">

@@ -137,13 +137,13 @@ export function RateLimitTest() {
               id="test-count"
               value={testCount}
               onChange={(e) => setTestCount(Number(e.target.value))}
-              className="px-3 py-1 border rounded text-sm bg-background text-foreground border-border"
+              className="px-3 py-1 border rounded text-sm bg-background text-foreground border-border focus:ring-2 focus:ring-primary focus:border-primary"
               disabled={isRunning}
             >
-              <option value={5}>5</option>
-              <option value={10}>10</option>
-              <option value={20}>20</option>
-              <option value={50}>50</option>
+              <option value={5} className="bg-background text-foreground">5</option>
+              <option value={10} className="bg-background text-foreground">10</option>
+              <option value={20} className="bg-background text-foreground">20</option>
+              <option value={50} className="bg-background text-foreground">50</option>
             </select>
           </div>
           
