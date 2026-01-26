@@ -150,7 +150,11 @@ export function RichTextEditor({ value, onChange }: RichTextEditorProps) {
         style={{
           wordWrap: 'break-word',
           overflowWrap: 'break-word',
+          direction: 'ltr',
+          textAlign: 'left',
+          unicodeBidi: 'normal',
         }}
+        dir="ltr"
       />
     </div>
   );
