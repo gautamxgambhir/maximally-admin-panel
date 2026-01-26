@@ -2,12 +2,14 @@ import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus, Mail, Users, Calendar, Send, Settings } from 'lucide-react';
+import { Plus, Mail, Users, Calendar, Send, Settings, Activity } from 'lucide-react';
 import { NewsletterComposer } from '@/components/newsletter/NewsletterComposer';
 import { NewsletterList } from '@/components/newsletter/NewsletterList';
 import { NewsletterSubscribers } from '@/components/newsletter/NewsletterSubscribers';
 import { NewsletterSchedule } from '@/components/newsletter/NewsletterSchedule';
 import { NewsletterStats } from '@/components/newsletter/NewsletterStats';
+import { EmailQueueMonitor } from '@/components/newsletter/EmailQueueMonitor';
+import { RateLimitTest } from '@/components/newsletter/RateLimitTest';
 
 export default function NewsletterManagement() {
   const [activeTab, setActiveTab] = useState('compose');
@@ -41,7 +43,7 @@ export default function NewsletterManagement() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="compose" className="flex items-center gap-2">
             <Mail className="h-4 w-4" />
             Compose
@@ -57,6 +59,10 @@ export default function NewsletterManagement() {
           <TabsTrigger value="schedule" className="flex items-center gap-2">
             <Calendar className="h-4 w-4" />
             Schedule
+          </TabsTrigger>
+          <TabsTrigger value="queue" className="flex items-center gap-2">
+            <Activity className="h-4 w-4" />
+            Queue
           </TabsTrigger>
           <TabsTrigger value="stats" className="flex items-center gap-2">
             <Settings className="h-4 w-4" />
@@ -121,6 +127,22 @@ export default function NewsletterManagement() {
               <NewsletterSchedule />
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="queue" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Email Queue Monitor</CardTitle>
+              <CardDescription>
+                Monitor email sending progress and rate limiting status
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <EmailQueueMonitor />
+            </CardContent>
+          </Card>
+          
+          <RateLimitTest />
         </TabsContent>
 
         <TabsContent value="stats" className="space-y-4">

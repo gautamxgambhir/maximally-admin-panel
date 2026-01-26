@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { Loader2, Send, Save, Calendar, Eye } from 'lucide-react';
 import { RichTextEditor } from './RichTextEditor';
 import { NewsletterPreview } from './NewsletterPreview';
+import { EmailQueueMonitor } from './EmailQueueMonitor';
 import { getApiBaseUrl, getAuthHeaders } from '@/lib/apiHelpers';
 import { ConfirmModal } from '@/components/ConfirmModal';
 import {
@@ -39,6 +40,8 @@ export function NewsletterComposer({ newsletterId, onClose }: NewsletterComposer
   const [scheduleDate, setScheduleDate] = useState('');
   const [scheduleTime, setScheduleTime] = useState('');
   const [showSendConfirm, setShowSendConfirm] = useState(false);
+  const [currentBatchId, setCurrentBatchId] = useState<string | null>(null);
+  const [showQueueMonitor, setShowQueueMonitor] = useState(false);
 
   useEffect(() => {
     if (newsletterId) {
@@ -172,10 +175,15 @@ export function NewsletterComposer({ newsletterId, onClose }: NewsletterComposer
 
       const data = await response.json();
       
-      toast.success(`Newsletter sent to ${data.total_sent} subscribers`);
+      toast.success(`Newsletter queued for sending to ${data.total_recipients} subscribers`);
+      
+      // Show queue monitor with batch tracking
+      if (data.batch_id) {
+        setCurrentBatchId(data.batch_id);
+        setShowQueueMonitor(true);
+      }
 
       resetForm();
-      onClose?.();
     } catch (error) {
       toast.error('Failed to send newsletter');
     } finally {
@@ -190,6 +198,36 @@ export function NewsletterComposer({ newsletterId, onClose }: NewsletterComposer
     setScheduleDate('');
     setScheduleTime('');
   };
+
+  const handleQueueMonitorRefresh = () => {
+    // Optionally refresh the newsletter list or perform other actions
+    onClose?.();
+  };
+
+  // Show queue monitor if we have a batch ID
+  if (showQueueMonitor && currentBatchId) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold">Newsletter Sending Progress</h3>
+          <Button 
+            variant="outline" 
+            onClick={() => {
+              setShowQueueMonitor(false);
+              setCurrentBatchId(null);
+              onClose?.();
+            }}
+          >
+            Close
+          </Button>
+        </div>
+        <EmailQueueMonitor 
+          batchId={currentBatchId} 
+          onRefresh={handleQueueMonitorRefresh}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
