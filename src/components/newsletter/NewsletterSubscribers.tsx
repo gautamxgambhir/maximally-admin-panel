@@ -192,6 +192,7 @@ export function NewsletterSubscribers() {
       const headers = await getAuthHeaders();
       
       console.log('API URL:', `${baseUrl}/api/admin/newsletter/subscribers/import`);
+      console.log('Request headers:', headers);
       
       const response = await fetch(`${baseUrl}/api/admin/newsletter/subscribers/import`, {
         method: 'POST',
@@ -203,11 +204,22 @@ export function NewsletterSubscribers() {
       });
 
       console.log('Response status:', response.status);
+      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        let errorData;
+        const contentType = response.headers.get('content-type');
+        
+        if (contentType && contentType.includes('application/json')) {
+          errorData = await response.json().catch(() => ({ error: 'Failed to parse error response' }));
+        } else {
+          const textResponse = await response.text();
+          console.error('Non-JSON error response:', textResponse);
+          errorData = { error: `Server error (${response.status}): ${textResponse || 'Unknown error'}` };
+        }
+        
         console.error('API Error:', errorData);
-        throw new Error(errorData.error || 'Failed to import');
+        throw new Error(errorData.error || `HTTP ${response.status}: Failed to import`);
       }
 
       const result: ImportResult = await response.json();
@@ -274,6 +286,24 @@ export function NewsletterSubscribers() {
             className="pl-10"
           />
         </div>
+        <Button 
+          onClick={async () => {
+            try {
+              const baseUrl = getApiBaseUrl();
+              const response = await fetch(`${baseUrl}/api/admin/newsletter/test`);
+              const result = await response.json();
+              console.log('Test result:', result);
+              toast.success('Connection test successful!');
+            } catch (error) {
+              console.error('Test failed:', error);
+              toast.error('Connection test failed');
+            }
+          }} 
+          variant="outline"
+          size="sm"
+        >
+          Test API
+        </Button>
         <Button onClick={() => setShowImportDialog(true)} variant="outline">
           <Upload className="h-4 w-4 mr-2" />
           Import CSV

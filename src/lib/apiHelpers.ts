@@ -15,22 +15,25 @@ export const getApiBaseUrl = (): string => {
   // Check if we have an explicit environment variable
   const envUrl = import.meta.env.VITE_API_BASE_URL
   if (envUrl) {
+    console.log('Using API base URL from env:', envUrl)
     return envUrl
   }
   
   // Auto-detect based on hostname
   if (typeof window !== 'undefined') {
     const hostname = window.location.hostname
+    console.log('Auto-detecting API base URL for hostname:', hostname)
     
     // Production: admin panel is on maximally.admin-panel.vercel.app or similar
     // Main website is on maximally.in
     if (hostname.includes('vercel.app') || hostname.includes('admin')) {
+      console.log('Using production API base URL')
       return 'https://maximally.in'
     }
   }
   
   // Development fallback
-  console.warn('VITE_API_BASE_URL is not set. Using localhost.')
+  console.log('Using development API base URL (localhost:5002)')
   return 'http://localhost:5002'
 }
 
@@ -64,15 +67,22 @@ export const getMainWebsiteUrl = (): string => {
  * Get authentication headers for API calls
  */
 export const getAuthHeaders = async (): Promise<HeadersInit> => {
-  const { data: { session } } = await supabase.auth.getSession()
-  
-  if (!session?.access_token) {
-    throw new Error('Not authenticated. Please log in.')
-  }
-  
-  return {
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${session.access_token}`
+  try {
+    const { data: { session } } = await supabase.auth.getSession()
+    
+    if (!session?.access_token) {
+      console.error('No session or access token found')
+      throw new Error('Not authenticated. Please log in.')
+    }
+    
+    console.log('Auth headers created successfully')
+    return {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${session.access_token}`
+    }
+  } catch (error) {
+    console.error('Error getting auth headers:', error)
+    throw error
   }
 }
 
