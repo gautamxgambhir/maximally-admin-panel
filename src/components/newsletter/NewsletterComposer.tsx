@@ -255,6 +255,9 @@ export function NewsletterComposer({ newsletterId, onClose }: NewsletterComposer
       </div>
     );
   }
+
+  // Show queue monitor if active
+  if (showQueueMonitor && currentBatchId) {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
