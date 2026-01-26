@@ -92,16 +92,16 @@ export function RateLimitTest() {
 
   const getResultIcon = (result: TestResult) => {
     if (result.statusCode === 429) {
-      return <AlertTriangle className="h-4 w-4 text-yellow-500" />;
+      return <AlertTriangle className="h-4 w-4 text-yellow-500 dark:text-yellow-400" />;
     }
     return result.success ? 
-      <CheckCircle2 className="h-4 w-4 text-green-500" /> : 
-      <XCircle className="h-4 w-4 text-red-500" />;
+      <CheckCircle2 className="h-4 w-4 text-green-500 dark:text-green-400" /> : 
+      <XCircle className="h-4 w-4 text-red-500 dark:text-red-400" />;
   };
 
   const getResultBadge = (result: TestResult) => {
     if (result.statusCode === 429) {
-      return <Badge variant="outline" className="text-yellow-600 border-yellow-600">Rate Limited</Badge>;
+      return <Badge variant="outline" className="text-yellow-600 border-yellow-600 dark:text-yellow-400 dark:border-yellow-400">Rate Limited</Badge>;
     }
     return result.success ? 
       <Badge variant="default">Success</Badge> : 
@@ -137,7 +137,7 @@ export function RateLimitTest() {
               id="test-count"
               value={testCount}
               onChange={(e) => setTestCount(Number(e.target.value))}
-              className="px-3 py-1 border rounded text-sm"
+              className="px-3 py-1 border rounded text-sm bg-background text-foreground border-border"
               disabled={isRunning}
             >
               <option value={5}>5</option>
@@ -150,7 +150,7 @@ export function RateLimitTest() {
           <Button 
             onClick={runRateLimitTest} 
             disabled={isRunning}
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 text-foreground"
           >
             {isRunning ? (
               <>
@@ -189,19 +189,19 @@ export function RateLimitTest() {
             <div className="pt-2 border-t">
               <div className="grid grid-cols-3 gap-4 text-center text-sm">
                 <div>
-                  <div className="font-semibold text-green-600">
+                  <div className="font-semibold text-green-600 dark:text-green-400">
                     {results.filter(r => r.success).length}
                   </div>
                   <div className="text-muted-foreground">Successful</div>
                 </div>
                 <div>
-                  <div className="font-semibold text-yellow-600">
+                  <div className="font-semibold text-yellow-600 dark:text-yellow-400">
                     {results.filter(r => r.statusCode === 429).length}
                   </div>
                   <div className="text-muted-foreground">Rate Limited</div>
                 </div>
                 <div>
-                  <div className="font-semibold text-red-600">
+                  <div className="font-semibold text-red-600 dark:text-red-400">
                     {results.filter(r => !r.success && r.statusCode !== 429).length}
                   </div>
                   <div className="text-muted-foreground">Failed</div>

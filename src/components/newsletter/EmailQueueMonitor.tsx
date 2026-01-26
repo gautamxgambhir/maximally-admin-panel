@@ -115,13 +115,13 @@ export function EmailQueueMonitor({ batchId, onRefresh }: EmailQueueMonitorProps
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'completed':
-        return <CheckCircle2 className="h-4 w-4 text-green-500" />;
+        return <CheckCircle2 className="h-4 w-4 text-green-500 dark:text-green-400" />;
       case 'failed':
-        return <XCircle className="h-4 w-4 text-red-500" />;
+        return <XCircle className="h-4 w-4 text-red-500 dark:text-red-400" />;
       case 'processing':
-        return <RefreshCw className="h-4 w-4 text-blue-500 animate-spin" />;
+        return <RefreshCw className="h-4 w-4 text-blue-500 dark:text-blue-400 animate-spin" />;
       default:
-        return <Clock className="h-4 w-4 text-yellow-500" />;
+        return <Clock className="h-4 w-4 text-yellow-500 dark:text-yellow-400" />;
     }
   };
 
@@ -158,12 +158,12 @@ export function EmailQueueMonitor({ batchId, onRefresh }: EmailQueueMonitorProps
                 variant="outline"
                 size="sm"
                 onClick={toggleAutoRefresh}
-                className={autoRefresh ? 'bg-green-50 border-green-200' : ''}
+                className={autoRefresh ? 'bg-green-50 border-green-200 text-green-700 dark:bg-green-900/20 dark:border-green-700 dark:text-green-300' : 'text-foreground'}
               >
                 <RefreshCw className={`h-4 w-4 mr-2 ${autoRefresh ? 'animate-spin' : ''}`} />
                 {autoRefresh ? 'Auto' : 'Manual'}
               </Button>
-              <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isLoading}>
+              <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isLoading} className="text-foreground">
                 <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
               </Button>
             </div>
@@ -173,23 +173,23 @@ export function EmailQueueMonitor({ batchId, onRefresh }: EmailQueueMonitorProps
           {queueStats ? (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="text-center">
-                <div className="text-2xl font-bold text-yellow-600">{queueStats.pending}</div>
+                <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{queueStats.pending}</div>
                 <div className="text-sm text-muted-foreground">Pending</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-green-600">{queueStats.totalSent}</div>
+                <div className="text-2xl font-bold text-green-600 dark:text-green-400">{queueStats.totalSent}</div>
                 <div className="text-sm text-muted-foreground">Total Sent</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-red-600">{queueStats.totalFailed}</div>
+                <div className="text-2xl font-bold text-red-600 dark:text-red-400">{queueStats.totalFailed}</div>
                 <div className="text-sm text-muted-foreground">Total Failed</div>
               </div>
               <div className="text-center">
                 <div className="flex items-center justify-center gap-2">
                   {queueStats.processing ? (
-                    <RefreshCw className="h-4 w-4 text-blue-500 animate-spin" />
+                    <RefreshCw className="h-4 w-4 text-blue-500 dark:text-blue-400 animate-spin" />
                   ) : (
-                    <Clock className="h-4 w-4 text-gray-500" />
+                    <Clock className="h-4 w-4 text-gray-500 dark:text-gray-400" />
                   )}
                   <Badge variant={queueStats.processing ? 'default' : 'secondary'}>
                     {queueStats.processing ? 'Processing' : 'Idle'}
@@ -242,15 +242,15 @@ export function EmailQueueMonitor({ batchId, onRefresh }: EmailQueueMonitorProps
 
               <div className="grid grid-cols-3 gap-4 text-center">
                 <div>
-                  <div className="text-lg font-semibold text-green-600">{batchProgress.sent}</div>
+                  <div className="text-lg font-semibold text-green-600 dark:text-green-400">{batchProgress.sent}</div>
                   <div className="text-sm text-muted-foreground">Sent</div>
                 </div>
                 <div>
-                  <div className="text-lg font-semibold text-red-600">{batchProgress.failed}</div>
+                  <div className="text-lg font-semibold text-red-600 dark:text-red-400">{batchProgress.failed}</div>
                   <div className="text-sm text-muted-foreground">Failed</div>
                 </div>
                 <div>
-                  <div className="text-lg font-semibold text-yellow-600">{batchProgress.pending}</div>
+                  <div className="text-lg font-semibold text-yellow-600 dark:text-yellow-400">{batchProgress.pending}</div>
                   <div className="text-sm text-muted-foreground">Pending</div>
                 </div>
               </div>

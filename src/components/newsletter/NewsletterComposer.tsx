@@ -217,6 +217,7 @@ export function NewsletterComposer({ newsletterId, onClose }: NewsletterComposer
               setCurrentBatchId(null);
               onClose?.();
             }}
+            className="text-foreground"
           >
             Close
           </Button>
