@@ -371,7 +371,8 @@ function App() {
           </ProtectedRoute>
         }
       />
-      <Route
+      {/* Documentation route temporarily disabled */}
+      {/* <Route
         path="/docs"
         element={
           <ProtectedRoute>
@@ -380,7 +381,7 @@ function App() {
             </Layout>
           </ProtectedRoute>
         }
-      />
+      /> */}
       <Route
         path="/newsletter"
         element={

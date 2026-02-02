@@ -174,12 +174,13 @@ export function Layout({ children }: LayoutProps) {
           icon: Plus,
           requiredPermission: 'can_edit_hackathons' as AdminPermission,
         },
-        {
+        {/* Documentation temporarily hidden */}
+        {/* {
           name: 'Documentation',
           href: '/docs',
           icon: FileText,
           requiredPermission: 'can_edit_hackathons' as AdminPermission,
-        },
+        }, */}
       ]
     },
     {
